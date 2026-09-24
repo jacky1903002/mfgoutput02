@@ -513,6 +513,16 @@ function buildAllEightComparisonCharts(sheet) {
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const materials = ["石墨", "鎢鉬鈕", "其他"];
 
+      // 自動尋找實際的欄位 Key (適應 2023, 2024 或 y2023 等不同欄位名稱)
+      const findKey = (yearStr) => {
+        let col = sheet.columns.find(c => String(c.title).includes(yearStr) || String(c.key).includes(yearStr));
+        return col ? col.key : yearStr;
+      };
+      const k23 = findKey('2023');
+      const k24 = findKey('2024');
+      const k25 = findKey('2025');
+      const k26 = findKey('2026');
+
       const getMaterialRows = (mat) => {
         return sheet.data.filter(r => {
           let cat = String(r.category || r[sheet.columns[0].key] || '').trim();
@@ -523,15 +533,15 @@ function buildAllEightComparisonCharts(sheet) {
       const getCombinedRows = () => {
         let combined = [];
         months.forEach((m, idx) => {
-          let rowObj = { month: m, y2023: 0, y2024: 0, y2025: 0, y2026: 0 };
+          let rowObj = { month: m, [k23]: 0, [k24]: 0, [k25]: 0, [k26]: 0 };
           materials.forEach(mat => {
             let mRows = getMaterialRows(mat);
             let target = mRows[idx];
             if (target) {
-              rowObj.y2023 += parseNum(target.y2023);
-              rowObj.y2024 += parseNum(target.y2024);
-              rowObj.y2025 += parseNum(target.y2025);
-              rowObj.y2026 += parseNum(target.y2026);
+              rowObj[k23] += parseNum(target[k23]);
+              rowObj[k24] += parseNum(target[k24]);
+              rowObj[k25] += parseNum(target[k25]);
+              rowObj[k26] += parseNum(target[k26]);
             }
           });
           combined.push(rowObj);
@@ -539,36 +549,76 @@ function buildAllEightComparisonCharts(sheet) {
         return combined;
       };
 
-      // 1-4: 產值同期比較 (柱狀圖) ->對應 sc1 ~ sc4
+      // 1-4: 產值同期比較 (柱狀圖) -> 對應 sc1 ~ sc4
       materials.forEach((mat, idx) => {
         let rows = getMaterialRows(mat);
-        drawBarComparisonChart(`sc${idx+1}`, rows, `${mat}產值同期比較`);
+        drawBarComparisonChart(`sc${idx+1}`, rows, `${mat}產值同期比較`, k23, k24, k25, k26);
       });
-      drawBarComparisonChart('sc4', getCombinedRows(), '合計產值同期比較');
+      drawBarComparisonChart('sc4', getCombinedRows(), '合計產值同期比較', k23, k24, k25, k26);
 
-      // 5-8: 累積產值 (折線圖) ->對應 sc5 ~ sc8
+      // 5-8: 累積產值 (折線圖) -> 對應 sc5 ~ sc8
       materials.forEach((mat, idx) => {
         let rows = getMaterialRows(mat);
-        drawCumulativeLineChart(`sc${idx+5}`, rows, `${mat}累積產值`);
+        drawCumulativeLineChart(`sc${idx+5}`, rows, `${mat}累積產值`, k23, k24, k25, k26);
       });
-      drawCumulativeLineChart('sc8', getCombinedRows(), '合計累積產值');
+      drawCumulativeLineChart('sc8', getCombinedRows(), '合計累積產值', k23, k24, k25, k26);
     }
 
-    function drawBarComparisonChart(chartId, rows, titleText) {
+    function drawBarComparisonChart(chartId, rows, titleText, k23, k24, k25, k26) {
       const canvas = document.getElementById(`canvas-${chartId}`);
       if (!canvas) return;
       if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
 
-      const labels = rows.map(r => r.month || 'Month');
+      // 自動抓取月份欄位名稱
+      const monthKey = Object.keys(rows[0] || {}).find(k => k !== k23 && k !== k24 && k !== k25 && k !== k26) || 'month';
+      const labels = rows.map(r => r[monthKey] || r.month || 'Month');
+
       window.chartInstances[chartId] = new Chart(canvas, {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [
-            { label: '2023', data: rows.map(r => parseNum(r.y2023)), backgroundColor: '#10b981' },
-            { label: '2024', data: rows.map(r => parseNum(r.y2024)), backgroundColor: '#3b82f6' },
-            { label: '2025', data: rows.map(r => parseNum(r.y2025)), backgroundColor: '#f59e0b' },
-            { label: '2026', data: rows.map(r => parseNum(r.y2026)), backgroundColor: '#ef4444' }
+            { label: '2023', data: rows.map(r => parseNum(r[k23])), backgroundColor: '#10b981' },
+            { label: '2024', data: rows.map(r => parseNum(r[k24])), backgroundColor: '#3b82f6' },
+            { label: '2025', data: rows.map(r => parseNum(r[k25])), backgroundColor: '#f59e0b' },
+            { label: '2026', data: rows.map(r => parseNum(r[k26])), backgroundColor: '#ef4444' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false, text: titleText }
+          }
+        }
+      });
+    }
+
+    function drawCumulativeLineChart(chartId, rows, titleText, k23, k24, k25, k26) {
+      const canvas = document.getElementById(`canvas-${chartId}`);
+      if (!canvas) return;
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+      const monthKey = Object.keys(rows[0] || {}).find(k => k !== k23 && k !== k24 && k !== k25 && k !== k26) || 'month';
+      const labels = rows.map(r => r[monthKey] || r.month || 'Month');
+
+      // 計算累積加總 (Cumulative Sum)
+      let sum23 = 0, sum24 = 0, sum25 = 0, sum26 = 0;
+      const data23 = rows.map(r => { sum23 += parseNum(r[k23]); return sum23; });
+      const data24 = rows.map(r => { sum24 += parseNum(r[k24]); return sum24; });
+      const data25 = rows.map(r => { sum25 += parseNum(r[k25]); return sum25; });
+      const data26 = rows.map(r => { sum26 += parseNum(r[k26]); return sum26; });
+
+      window.chartInstances[chartId] = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: '2023', data: data23, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.1 },
+            { label: '2024', data: data24, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.1 },
+            { label: '2025', data: data25, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.1 },
+            { label: '2026', data: data26, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.1 }
           ]
         },
         options: {
