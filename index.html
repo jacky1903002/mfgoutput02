@@ -35,7 +35,7 @@
     const ADMIN_EMAIL = "n1693131@gmail.com";
     window.isAuthorizedEditor = false;
 
-    // 預設資料結構（符合您的 3 大類別與 6 項指標）
+    // 預設資料結構（符合您的 3 大類別與 20 個月份）
     const defaultSheets = [
       {
         id: "s1",
@@ -258,33 +258,49 @@
       tableHtml += `</tbody></table>`;
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
-      // 產生 6 張圖表的容器（針對「刀具費佔成本」專用）
-      let chartsHtml = `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
-      
-      const chartConfigs = [
-        { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
-        { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
-        { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
-        { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
-        { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
-        { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
-      ];
+      // 檢查是否為「刀具費佔成本」工作表，若是則繪製專屬 6 張圖表
+      let chartsHtml = '';
+      if (currentSheet.name.includes("刀具費佔成本") || currentSheet.columns.length > 5) {
+        chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
+        const chartConfigs = [
+          { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
+          { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
+          { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
+          { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
+          { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
+          { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
+        ];
 
-      chartConfigs.forEach(cfg => {
-        chartsHtml += `
-          <div class="chart-page" id="export-area-${cfg.id}">
-            <div class="chart-header">
-              <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
-              <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+        chartConfigs.forEach(cfg => {
+          chartsHtml += `
+            <div class="chart-page" id="export-area-${cfg.id}">
+              <div class="chart-header">
+                <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+                <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+              </div>
+              <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
             </div>
-            <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
+          `;
+        });
+        chartsHtml += `</div>`;
+      } else {
+        chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 分析圖表</div><div class="charts-grid">
+          <div class="chart-page" id="export-area-default">
+            <div class="chart-header"><div class="chart-title"><i class="fa-solid fa-chart-bar"></i> 數據概覽圖</div></div>
+            <div class="chart-wrapper"><canvas id="canvas-default"></canvas></div>
           </div>
-        `;
-      });
-      chartsHtml += `</div>`;
+        </div>`;
+      }
+
       document.getElementById('charts-container').innerHTML = chartsHtml;
 
-      setTimeout(() => { buildAllSixCharts(currentSheet); }, 100);
+      setTimeout(() => { 
+        if (currentSheet.name.includes("刀具費佔成本") || currentSheet.columns.length > 5) {
+          buildAllSixCharts(currentSheet); 
+        } else {
+          buildDefaultChart(currentSheet);
+        }
+      }, 100);
     };
 
     window.switchSheet = function(id) {
@@ -300,8 +316,8 @@
       window.appState.sheets.push({
         id: newId,
         name: name,
-        columns: [{ key: "category", title: "類別" }, { key: "m1", title: "Jan-25" }, { key: "m2", title: "Feb-25" }],
-        data: [{ category: "範例資料", m1: 100, m2: 200 }]
+        columns: [{ key: "category", title: "類別" }, { key: "m1", title: "Jan-26" }, { key: "m2", title: "Feb-26" }],
+        data: [{ category: "範例項目", m1: 100, m2: 200 }]
       });
       window.appState.currentSheetId = newId;
       renderApp();
@@ -426,7 +442,7 @@
     };
 
     function parseNum(val) {
-      if (!val) return 0;
+      if (val === undefined || val === null || val === '') return 0;
       let s = String(val).replace(/[^0-9.-]/g, '');
       let n = parseFloat(s);
       return isNaN(n) ? 0 : n;
@@ -435,27 +451,31 @@
     window.chartInstances = {};
 
     function buildAllSixCharts(sheet) {
-      // 取得月份標籤 (排除第一欄「類別」)
       const monthCols = sheet.columns.slice(1);
       const labels = monthCols.map(c => c.title);
+      const catKey = sheet.columns[0].key;
 
-      // 找出對應的三大類別資料列
-      const getRowByKeyword = (kw) => sheet.data.find(r => String(r[sheet.columns[0].key]).includes(kw));
+      const getRowByKeywords = (k1, k2) => {
+        return sheet.data.find(r => {
+          let val = String(r[catKey] || '');
+          return val.includes(k1) && val.includes(k2);
+        });
+      };
 
       // 鎢鉬鈕相關列
-      const tungstenFeeRow = getRowByKeyword("鎢鉬鈕") && sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && String(r[sheet.columns[0].key]).includes("費"))[0];
-      const tungstenCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
-      const tungstenRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+      const tungstenFeeRow = getRowByKeywords("鎢鉬鈕", "刀具費");
+      const tungstenCostRow = getRowByKeywords("鎢鉬鈕", "成本");
+      const tungstenRatioRow = getRowByKeywords("鎢鉬鈕", "佔比");
 
       // 石墨刀相關列
-      const graphiteFeeRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && String(r[sheet.columns[0].key]).includes("費"))[0];
-      const graphiteCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
-      const graphiteRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+      const graphiteFeeRow = getRowByKeywords("石墨刀", "刀具費");
+      const graphiteCostRow = getRowByKeywords("石墨刀", "成本");
+      const graphiteRatioRow = getRowByKeywords("石墨刀", "佔比");
 
       // 其他刀相關列
-      const otherFeeRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && String(r[sheet.columns[0].key]).includes("費"))[0];
-      const otherCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
-      const otherRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+      const otherFeeRow = getRowByKeywords("其他刀", "刀具費");
+      const otherCostRow = getRowByKeywords("其他刀", "成本");
+      const otherRatioRow = getRowByKeywords("其他刀", "佔比");
 
       const getValues = (row) => row ? monthCols.map(c => parseNum(row[c.key])) : labels.map(() => 0);
       const getRatioValues = (row) => row ? monthCols.map(c => {
@@ -464,20 +484,30 @@
         return isNaN(n) ? 0 : (n <= 1 ? n * 100 : n);
       }) : labels.map(() => 0);
 
-      // 繪製 C1: 鎢鉬鈕 金額與佔比
       drawBarLineChart('c1', labels, getValues(tungstenFeeRow), getRatioValues(tungstenRatioRow), '鎢鉬鈕刀具費', '佔比 (%)', 'y', 'y1');
-      // 繪製 C2: 鎢鉬鈕 費與成本
       drawDoubleLineChart('c2', labels, getValues(tungstenFeeRow), getValues(tungstenCostRow), '鎢鉬鈕刀具費', '鎢鉬產品成本');
       
-      // 繪製 C3: 石墨刀 金額與佔比
       drawBarLineChart('c3', labels, getValues(graphiteFeeRow), getRatioValues(graphiteRatioRow), '石墨刀具費', '佔比 (%)', 'y', 'y1');
-      // 繪製 C4: 石墨刀 費與成本
       drawDoubleLineChart('c4', labels, getValues(graphiteFeeRow), getValues(graphiteCostRow), '石墨刀具費', '石墨產品成本');
 
-      // 繪製 C5: 其他刀 金額與佔比
       drawBarLineChart('c5', labels, getValues(otherFeeRow), getRatioValues(otherRatioRow), '其他刀具費', '佔比 (%)', 'y', 'y1');
-      // 繪製 C6: 其他刀 費與成本
       drawDoubleLineChart('c6', labels, getValues(otherFeeRow), getValues(otherCostRow), '其他刀具費', '其他產品成本');
+    }
+
+    function buildDefaultChart(sheet) {
+      const canvas = document.getElementById('canvas-default');
+      if (!canvas) return;
+      if (window.chartInstances['default']) window.chartInstances['default'].destroy();
+      const labels = sheet.data.map(r => r[sheet.columns[0].key] || '');
+      const valCol = sheet.columns[1];
+      window.chartInstances['default'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: valCol ? valCol.title : '數值', data: sheet.data.map(r => parseNum(r[valCol?.key])), backgroundColor: 'rgba(59, 130, 246, 0.7)' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
     }
 
     function drawBarLineChart(chartId, labels, barData, lineData, barLabel, lineLabel, yId, y1Id) {
