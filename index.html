@@ -227,13 +227,14 @@
   </div>
 
   <script>
-    window.renderApp = function() {
+   window.renderApp = function() {
       const state = window.appState;
       if (!state || !state.sheets) return;
       
       const currentSheet = state.sheets.find(s => s.id === state.currentSheetId) || state.sheets[0];
       state.currentSheetId = currentSheet.id;
 
+      // 渲染工作表導覽列
       let tabsHtml = '';
       state.sheets.forEach(sheet => {
         const isActive = sheet.id === currentSheet.id ? 'active' : '';
@@ -247,6 +248,7 @@
       tabsHtml += `<button class="btn btn-primary" style="padding: 4px 10px;" onclick="addSheet()"><i class="fa-solid fa-plus"></i> 新增工作表</button>`;
       document.getElementById('sheet-tabs-container').innerHTML = tabsHtml;
 
+      // 渲染表格資料
       let tableHtml = `<table><thead><tr>`;
       currentSheet.columns.forEach((col, colIdx) => {
         tableHtml += `<th>${window.isAuthorizedEditor ? `<input type="text" value="${col.title}" class="cell-input" style="font-weight:bold;" onchange="updateColTitle(${colIdx}, this.value)">` : col.title}</th>`;
@@ -264,25 +266,32 @@
       tableHtml += `</tbody></table>`;
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
-      let isCostSheet = currentSheet.columns.length > 5 || currentSheet.name.includes("刀具") || currentSheet.name.includes("成本") || currentSheet.name.includes("工作表");
+      // 判斷是否為第二個工作表（或包含特定關鍵字的產值比較表）
+      const sheetIndex = state.sheets.findIndex(s => s.id === currentSheet.id);
+      let isSecondSheet = (sheetIndex === 1) || currentSheet.name.includes("同期") || currentSheet.name.includes("產值");
 
       let chartsHtml = '';
-      if (isCostSheet) {
-        chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
+      if (isSecondSheet) {
+        // 第二個工作表：顯示 8 張同期與累積圖表
+        chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 產值同期比較與累積分析 (共8張)</div>`;
+        
         const chartConfigs = [
-          { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
-          { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
-          { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
-          { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
-          { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
-          { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
+          { id: 'sc1', title: '產值同期比較(石墨)' },
+          { id: 'sc2', title: '產值同期比較(鎢鉬鈕)' },
+          { id: 'sc3', title: '產值同期比較(其他)' },
+          { id: 'sc4', title: '產值同期比較(合計)' },
+          { id: 'sc5', title: '石墨累積產值' },
+          { id: 'sc6', title: '鎢鉬鈕累積產值' },
+          { id: 'sc7', title: '其他累積產值' },
+          { id: 'sc8', title: '合計累積產值' }
         ];
 
+        chartsHtml += `<div class="charts-grid">`;
         chartConfigs.forEach(cfg => {
           chartsHtml += `
             <div class="chart-page" id="export-area-${cfg.id}">
               <div class="chart-header">
-                <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+                <div class="chart-title"><i class="fa-solid fa-chart-bar" style="color:#2563eb;"></i> ${cfg.title}</div>
                 <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
               </div>
               <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
@@ -290,19 +299,50 @@
           `;
         });
         chartsHtml += `</div>`;
+
       } else {
-        chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 分析圖表</div><div class="charts-grid">
-          <div class="chart-page" id="export-area-default">
-            <div class="chart-header"><div class="chart-title"><i class="fa-solid fa-chart-bar"></i> 數據概覽圖</div></div>
-            <div class="chart-wrapper"><canvas id="canvas-default"></canvas></div>
-          </div>
-        </div>`;
+        // 第一個工作表：原本的 6 張成本分析圖表
+        let isCostSheet = currentSheet.columns.length > 5 || currentSheet.name.includes("刀具") || currentSheet.name.includes("成本") || currentSheet.name.includes("工作表");
+        if (isCostSheet) {
+          chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
+          const chartConfigs = [
+            { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
+            { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
+            { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
+            { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
+            { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
+            { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
+          ];
+
+          chartConfigs.forEach(cfg => {
+            chartsHtml += `
+              <div class="chart-page" id="export-area-${cfg.id}">
+                <div class="chart-header">
+                  <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+                  <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+                </div>
+                <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
+              </div>
+            `;
+          });
+          chartsHtml += `</div>`;
+        } else {
+          chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 分析圖表</div><div class="charts-grid">
+            <div class="chart-page" id="export-area-default">
+              <div class="chart-header"><div class="chart-title"><i class="fa-solid fa-chart-bar"></i> 數據概覽圖</div></div>
+              <div class="chart-wrapper"><canvas id="canvas-default"></canvas></div>
+            </div>
+          </div>`;
+        }
       }
 
       document.getElementById('charts-container').innerHTML = chartsHtml;
 
+      // 延遲呼叫對應的圖表繪製函式
       setTimeout(() => { 
-        if (isCostSheet) {
+        if (isSecondSheet) {
+          buildAllEightComparisonCharts(currentSheet);
+        } else if (isCostSheet) {
           buildAllSixCharts(currentSheet); 
         } else {
           buildDefaultChart(currentSheet);
@@ -469,7 +509,114 @@
     }
 
     window.chartInstances = {};
+function buildAllEightComparisonCharts(sheet) {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const materials = ["石墨", "鎢鉬鈕", "其他"];
 
+      const getMaterialRows = (mat) => {
+        return sheet.data.filter(r => {
+          let cat = String(r.category || r[sheet.columns[0].key] || '').trim();
+          return cat.includes(mat);
+        });
+      };
+
+      const getCombinedRows = () => {
+        let combined = [];
+        months.forEach((m, idx) => {
+          let rowObj = { month: m, y2023: 0, y2024: 0, y2025: 0, y2026: 0 };
+          materials.forEach(mat => {
+            let mRows = getMaterialRows(mat);
+            let target = mRows[idx];
+            if (target) {
+              rowObj.y2023 += parseNum(target.y2023);
+              rowObj.y2024 += parseNum(target.y2024);
+              rowObj.y2025 += parseNum(target.y2025);
+              rowObj.y2026 += parseNum(target.y2026);
+            }
+          });
+          combined.push(rowObj);
+        });
+        return combined;
+      };
+
+      // 1-4: 產值同期比較 (柱狀圖) ->對應 sc1 ~ sc4
+      materials.forEach((mat, idx) => {
+        let rows = getMaterialRows(mat);
+        drawBarComparisonChart(`sc${idx+1}`, rows, `${mat}產值同期比較`);
+      });
+      drawBarComparisonChart('sc4', getCombinedRows(), '合計產值同期比較');
+
+      // 5-8: 累積產值 (折線圖) ->對應 sc5 ~ sc8
+      materials.forEach((mat, idx) => {
+        let rows = getMaterialRows(mat);
+        drawCumulativeLineChart(`sc${idx+5}`, rows, `${mat}累積產值`);
+      });
+      drawCumulativeLineChart('sc8', getCombinedRows(), '合計累積產值');
+    }
+
+    function drawBarComparisonChart(chartId, rows, titleText) {
+      const canvas = document.getElementById(`canvas-${chartId}`);
+      if (!canvas) return;
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+      const labels = rows.map(r => r.month || 'Month');
+      window.chartInstances[chartId] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: '2023', data: rows.map(r => parseNum(r.y2023)), backgroundColor: '#10b981' },
+            { label: '2024', data: rows.map(r => parseNum(r.y2024)), backgroundColor: '#3b82f6' },
+            { label: '2025', data: rows.map(r => parseNum(r.y2025)), backgroundColor: '#f59e0b' },
+            { label: '2026', data: rows.map(r => parseNum(r.y2026)), backgroundColor: '#ef4444' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false, text: titleText }
+          }
+        }
+      });
+    }
+
+    function drawCumulativeLineChart(chartId, rows, titleText) {
+      const canvas = document.getElementById(`canvas-${chartId}`);
+      if (!canvas) return;
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+      const labels = rows.map(r => r.month || 'Month');
+
+      // 計算累積加總 (Cumulative Sum)
+      let sum23 = 0, sum24 = 0, sum25 = 0, sum26 = 0;
+      const data23 = rows.map(r => { sum23 += parseNum(r.y2023); return sum23; });
+      const data24 = rows.map(r => { sum24 += parseNum(r.y2024); return sum24; });
+      const data25 = rows.map(r => { sum25 += parseNum(r.y2025); return sum25; });
+      const data26 = rows.map(r => { sum26 += parseNum(r.y2026); return sum26; });
+
+      window.chartInstances[chartId] = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: '2023', data: data23, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.1 },
+            { label: '2024', data: data24, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.1 },
+            { label: '2025', data: data25, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.1 },
+            { label: '2026', data: data26, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false, text: titleText }
+          }
+        }
+      });
+    }
     function buildAllSixCharts(sheet) {
       const monthCols = sheet.columns.filter(c => {
         let t = String(c.title || '').trim();
