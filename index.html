@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- Firebase SDKs & 登入機制修正為 Email / Password -->
+  <!-- Firebase SDKs & 登入機制 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
@@ -35,25 +35,31 @@
     const ADMIN_EMAIL = "n1693131@gmail.com";
     window.isAuthorizedEditor = false;
 
-    // 預設資料結構
+    // 預設資料結構（符合您的 3 大類別與 6 項指標）
     const defaultSheets = [
       {
         id: "s1",
-        name: "產能量能分析",
+        name: "刀具費佔成本",
         columns: [
-          { key: "month", title: "月份/時間" },
-          { key: "val1", title: "石墨產出市值(NT$)" },
-          { key: "qty1", title: "石墨產出數量(PCS)" },
-          { key: "val2", title: "鎢鉬鈕產出市值(NT$)" },
-          { key: "qty2", title: "鎢鉬鈕產出數量(PCS)" },
-          { key: "totalVal", title: "合計產出市值(NT$)" },
-          { key: "totalQty", title: "合計產出數量(PCS)" },
-          { key: "ratio", title: "製造營收比例(%)" }
+          { key: "category", title: "類別" },
+          { key: "m1", title: "Jan-25" }, { key: "m2", title: "Feb-25" }, { key: "m3", title: "Mar-25" },
+          { key: "m4", title: "Apr-25" }, { key: "m5", title: "May-25" }, { key: "m6", title: "Jun-25" },
+          { key: "m7", title: "Jul-25" }, { key: "m8", title: "Aug-25" }, { key: "m9", title: "Sep-25" },
+          { key: "m10", title: "Oct-25" }, { key: "m11", title: "Nov-25" }, { key: "m12", title: "Dec-25" },
+          { key: "m13", title: "Jan-26" }, { key: "m14", title: "Feb-26" }, { key: "m15", title: "Mar-26" },
+          { key: "m16", title: "Apr-26" }, { key: "m17", title: "May-26" }, { key: "m18", title: "Jun-26" },
+          { key: "m19", title: "Jul-26" }, { key: "m20", title: "Aug-26" }
         ],
         data: [
-          { month: "Jan-23", val1: 13372096, qty1: 16986, val2: 51993637, qty2: 41422, totalVal: 114765332, totalQty: 460492, ratio: "81.52%" },
-          { month: "Feb-23", val1: 19277893, qty1: 22294, val2: 44492071, qty2: 40485, totalVal: 101759187, totalQty: 77182, ratio: "84.16%" },
-          { month: "Mar-23", val1: 24022470, qty1: 25924, val2: 64283584, qty2: 63304, totalVal: 146766000, totalQty: 110737, ratio: "85.58%" }
+          { category: "鎢鉬鈕 刀具費", m1: 90413, m2: 96744, m3: 96620, m4: 10136, m5: 10967, m6: 13920, m7: 13384, m8: 12542, m9: 14091, m10: 12864, m11: 13588, m12: 14525, m13: 14136, m14: 89494, m15: 13364, m16: 15221, m17: 15595, m18: 16655, m19: 13442, m20: 17590 },
+          { category: "鎢鉬鈕 產品成本", m1: 25341, m2: 21574, m3: 28230, m4: 31700, m5: 29762, m6: 28752, m7: 40708, m8: 32436, m9: 35054, m10: 37562, m11: 36024, m12: 33985, m13: 39618, m14: 27977, m15: 44148, m16: 35385, m17: 37308, m18: 34216, m19: 55225, m20: 47785 },
+          { category: "鎢鉬鈕 佔比(%)", m1: 0.0356, m2: 0.0448, m3: 0.0342, m4: 0.0319, m5: 0.0368, m6: 0.0484, m7: 0.0328, m8: 0.0386, m9: 0.0401, m10: 0.0342, m11: 0.0377, m12: 0.0427, m13: 0.0356, m14: 0.0319, m15: 0.0302, m16: 0.0430, m17: 0.0418, m18: 0.0486, m19: 0.0243, m20: 0.0368 },
+          { category: "石墨刀 刀具費", m1: 33068, m2: 37119, m3: 39007, m4: 40776, m5: 27865, m6: 29758, m7: 34863, m8: 33932, m9: 34722, m10: 34114, m11: 35004, m12: 44370, m13: 40943, m14: 27615, m15: 44512, m16: 49137, m17: 48571, m18: 51090, m19: 40433, m20: 39688 },
+          { category: "石墨刀 產品成本", m1: 67627, m2: 61855, m3: 78541, m4: 94449, m5: 48813, m6: 58184, m7: 71359, m8: 96350, m9: 96403, m10: 77676, m11: 75842, m12: 90437, m13: 95558, m14: 95394, m15: 10505, m16: 77135, m17: 14202, m18: 17087, m19: 18511, m20: 10531 },
+          { category: "石墨刀 佔比(%)", m1: 0.0488, m2: 0.0600, m3: 0.0496, m4: 0.0431, m5: 0.0570, m6: 0.0511, m7: 0.0488, m8: 0.0352, m9: 0.0360, m10: 0.0439, m11: 0.0461, m12: 0.0490, m13: 0.0428, m14: 0.0289, m15: 0.0423, m16: 0.0637, m17: 0.0342, m18: 0.0298, m19: 0.0218, m20: 0.0376 },
+          { category: "其他刀 刀具費", m1: 20485, m2: 23510, m3: 26010, m4: 19295, m5: 19088, m6: 21000, m7: 17219, m8: 13535, m9: 24683, m10: 15822, m11: 19788, m12: 23256, m13: 41902, m14: 30399, m15: 40984, m16: 51620, m17: 49734, m18: 65609, m19: 70701, m20: 75915 },
+          { category: "其他刀 產品成本", m1: 38113, m2: 28308, m3: 35691, m4: 26234, m5: 36134, m6: 28997, m7: 36081, m8: 41989, m9: 33871, m10: 27222, m11: 41763, m12: 26119, m13: 42202, m14: 28169, m15: 40508, m16: 36973, m17: 37394, m18: 37055, m19: 50304, m20: 45765 },
+          { category: "其他刀 佔比(%)", m1: 0.0053, m2: 0.0083, m3: 0.0072, m4: 0.0073, m5: 0.0052, m6: 0.0072, m7: 0.0047, m8: 0.0032, m9: 0.0072, m10: 0.0058, m11: 0.0047, m12: 0.0089, m13: 0.0099, m14: 0.0107, m15: 0.0101, m16: 0.0139, m17: 0.0133, m18: 0.0177, m19: 0.0140, m20: 0.0165 }
         ]
       }
     ];
@@ -70,7 +76,6 @@
           await set(ref(db, 'mfg_data'), window.appState);
         }
       } catch (e) {
-        console.error("載入 Firebase 失敗，使用預設值", e);
         window.appState = { sheets: defaultSheets, currentSheetId: "s1" };
       }
       renderApp();
@@ -96,18 +101,9 @@
     window.handleEmailLogin = function() {
       const email = document.getElementById('login-email').value;
       const pass = document.getElementById('login-password').value;
-      if (!email || !pass) {
-        alert("請輸入電子郵件與密碼！");
-        return;
-      }
       signInWithEmailAndPassword(auth, email, pass)
-        .then(() => {
-          alert("登入成功！");
-          window.toggleLoginModal(false);
-        })
-        .catch(error => {
-          alert("登入失敗: " + error.message);
-        });
+        .then(() => { alert("登入成功！"); window.toggleLoginModal(false); })
+        .catch(error => alert("登入失敗: " + error.message));
     };
 
     window.logoutGoogle = function() {
@@ -159,7 +155,7 @@
     .sheet-tab.active { background: #2563eb; color: white; }
     
     .toolbar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-    .table-container { background: white; border-radius: 8px; border: 1px solid #cbd5e1; max-height: 500px; overflow: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 40px; }
+    .table-container { background: white; border-radius: 8px; border: 1px solid #cbd5e1; max-height: 400px; overflow: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
     th, td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; }
     th { background: #f8fafc; font-weight: 600; color: #475569; position: sticky; top: 0; z-index: 10; }
@@ -167,11 +163,12 @@
     input.cell-input:focus { background: #eff6ff; border-radius: 4px; }
 
     .charts-section-title { font-size: 18px; font-weight: bold; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 8px; color: #0284c7; }
-    .charts-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+    @media(max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
     .chart-page { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
     .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .chart-title { font-size: 16px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px; }
-    .chart-wrapper { position: relative; height: 380px; width: 100%; }
+    .chart-title { font-size: 15px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px; }
+    .chart-wrapper { position: relative; height: 320px; width: 100%; }
 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
     .modal-box { background: white; padding: 30px; border-radius: 10px; width: 350px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
@@ -261,28 +258,33 @@
       tableHtml += `</tbody></table>`;
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
-      let chartsHtml = `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表</div><div class="charts-grid">`;
-      chartsHtml += `
-        <div class="chart-page" id="export-area-c1">
-          <div class="chart-header">
-            <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> 合計產出市值與產出數量趨勢圖</div>
-            <button class="btn btn-success" onclick="exportChartToPNG('c1', '合計產出市值與產出數量趨勢圖')"><i class="fa-solid fa-download"></i> 匯出 PNG</button>
+      // 產生 6 張圖表的容器（針對「刀具費佔成本」專用）
+      let chartsHtml = `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
+      
+      const chartConfigs = [
+        { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
+        { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
+        { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
+        { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
+        { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
+        { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
+      ];
+
+      chartConfigs.forEach(cfg => {
+        chartsHtml += `
+          <div class="chart-page" id="export-area-${cfg.id}">
+            <div class="chart-header">
+              <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+              <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+            </div>
+            <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
           </div>
-          <div class="chart-wrapper"><canvas id="canvas-c1"></canvas></div>
-        </div>
-        
-        <div class="chart-page" id="export-area-c2">
-          <div class="chart-header">
-            <div class="chart-title"><i class="fa-solid fa-chart-pie" style="color:#10b981;"></i> 製造營收比例分析圖</div>
-            <button class="btn btn-success" onclick="exportChartToPNG('c2', '製造營收比例分析圖')"><i class="fa-solid fa-download"></i> 匯出 PNG</button>
-          </div>
-          <div class="chart-wrapper"><canvas id="canvas-c2"></canvas></div>
-        </div>
-      `;
+        `;
+      });
       chartsHtml += `</div>`;
       document.getElementById('charts-container').innerHTML = chartsHtml;
 
-      setTimeout(() => { buildCharts(currentSheet); }, 100);
+      setTimeout(() => { buildAllSixCharts(currentSheet); }, 100);
     };
 
     window.switchSheet = function(id) {
@@ -298,19 +300,15 @@
       window.appState.sheets.push({
         id: newId,
         name: name,
-        columns: [{ key: "month", title: "月份/時間" }, { key: "val", title: "數值" }],
-        data: [{ month: "Jan-26", val: 100 }]
+        columns: [{ key: "category", title: "類別" }, { key: "m1", title: "Jan-25" }, { key: "m2", title: "Feb-25" }],
+        data: [{ category: "範例資料", m1: 100, m2: 200 }]
       });
       window.appState.currentSheetId = newId;
       renderApp();
     };
 
-    // 新增：重新命名工作表功能
     window.renameSheet = function(id) {
-      if (!window.isAuthorizedEditor) {
-        alert("需要管理者權限才能重新命名工作表！");
-        return;
-      }
+      if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
       const sheet = window.appState.sheets.find(s => s.id === id);
       if (!sheet) return;
       const newName = prompt("請輸入新的工作表名稱：", sheet.name);
@@ -334,7 +332,7 @@
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
       let newRow = {};
-      sheet.columns.forEach(c => newRow[c.key] = c.key === 'month' ? 'New' : 0);
+      sheet.columns.forEach((c, idx) => newRow[c.key] = idx === 0 ? '新項目' : 0);
       sheet.data.push(newRow);
       renderApp();
     };
@@ -348,7 +346,7 @@
     window.addColumn = function() {
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
-      const colTitle = prompt("請輸入新欄位標題：");
+      const colTitle = prompt("請輸入新欄位標題 (例: Sep-26)：");
       if (!colTitle) return;
       const colKey = 'col_' + Date.now();
       sheet.columns.push({ key: colKey, title: colTitle });
@@ -408,7 +406,7 @@
           const json = XLSX.utils.sheet_to_json(worksheet);
           if (json.length > 0) {
             const keys = Object.keys(json[0]);
-            const columns = keys.map((k, i) => ({ key: i === 0 ? 'month' : `col_${i}_${Date.now()}`, title: k }));
+            const columns = keys.map((k, i) => ({ key: i === 0 ? 'category' : `m${i}`, title: k }));
             const sheetData = json.map(row => {
               let rObj = {};
               keys.forEach((k, i) => { rObj[columns[i].key] = row[k]; });
@@ -427,38 +425,6 @@
       reader.readAsArrayBuffer(file);
     };
 
-    const yearSeparatorPlugin = {
-      id: 'yearSeparatorPlugin',
-      afterDraw(chart) {
-        const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
-        if (!x) return;
-        const labels = chart.data.labels || [];
-        const yearGroups = {};
-        labels.forEach((lbl, idx) => {
-          const match = String(lbl).match(/\d{2}$/);
-          const yr = match ? match[0] : 'Other';
-          if (!yearGroups[yr]) yearGroups[yr] = [];
-          yearGroups[yr].push(idx);
-        });
-        const keys = Object.keys(yearGroups);
-        ctx.save();
-        keys.forEach((yr, idx) => {
-          if (idx > 0) {
-            const prevLast = yearGroups[keys[idx - 1]].slice(-1)[0];
-            const currFirst = yearGroups[yr][0];
-            const sepX = (x.getPixelForValue(prevLast) + x.getPixelForValue(currFirst)) / 2;
-            ctx.beginPath();
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1.5;
-            ctx.moveTo(sepX, top);
-            ctx.lineTo(sepX, bottom);
-            ctx.stroke();
-          }
-        });
-        ctx.restore();
-      }
-    };
-
     function parseNum(val) {
       if (!val) return 0;
       let s = String(val).replace(/[^0-9.-]/g, '');
@@ -467,62 +433,101 @@
     }
 
     window.chartInstances = {};
-    function buildCharts(sheet) {
-      const labels = sheet.data.map(r => r[sheet.columns[0].key] || '');
+
+    function buildAllSixCharts(sheet) {
+      // 取得月份標籤 (排除第一欄「類別」)
+      const monthCols = sheet.columns.slice(1);
+      const labels = monthCols.map(c => c.title);
+
+      // 找出對應的三大類別資料列
+      const getRowByKeyword = (kw) => sheet.data.find(r => String(r[sheet.columns[0].key]).includes(kw));
+
+      // 鎢鉬鈕相關列
+      const tungstenFeeRow = getRowByKeyword("鎢鉬鈕") && sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && String(r[sheet.columns[0].key]).includes("費"))[0];
+      const tungstenCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
+      const tungstenRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("鎢鉬鈕") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+
+      // 石墨刀相關列
+      const graphiteFeeRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && String(r[sheet.columns[0].key]).includes("費"))[0];
+      const graphiteCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
+      const graphiteRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("石墨") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+
+      // 其他刀相關列
+      const otherFeeRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && String(r[sheet.columns[0].key]).includes("費"))[0];
+      const otherCostRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && (String(r[sheet.columns[0].key]).includes("成本") || String(r[sheet.columns[0].key]).includes("產")))[0];
+      const otherRatioRow = sheet.data.filter(r => String(r[sheet.columns[0].key]).includes("其他") && String(r[sheet.columns[0].key]).includes("佔比"))[0];
+
+      const getValues = (row) => row ? monthCols.map(c => parseNum(row[c.key])) : labels.map(() => 0);
+      const getRatioValues = (row) => row ? monthCols.map(c => {
+        let v = String(row[c.key] || '0').replace('%','');
+        let n = parseFloat(v);
+        return isNaN(n) ? 0 : (n <= 1 ? n * 100 : n);
+      }) : labels.map(() => 0);
+
+      // 繪製 C1: 鎢鉬鈕 金額與佔比
+      drawBarLineChart('c1', labels, getValues(tungstenFeeRow), getRatioValues(tungstenRatioRow), '鎢鉬鈕刀具費', '佔比 (%)', 'y', 'y1');
+      // 繪製 C2: 鎢鉬鈕 費與成本
+      drawDoubleLineChart('c2', labels, getValues(tungstenFeeRow), getValues(tungstenCostRow), '鎢鉬鈕刀具費', '鎢鉬產品成本');
       
-      const c1Canvas = document.getElementById('canvas-c1');
-      if (c1Canvas) {
-        if (window.chartInstances['c1']) window.chartInstances['c1'].destroy();
-        const valCol = sheet.columns.find(c => c.title.includes('市值') && c.title.includes('合計')) || sheet.columns[1];
-        const qtyCol = sheet.columns.find(c => c.title.includes('數量') && c.title.includes('合計')) || sheet.columns[2];
-        
-        window.chartInstances['c1'] = new Chart(c1Canvas, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [
-              { type: 'bar', label: valCol ? valCol.title : '市值', data: sheet.data.map(r => parseNum(r[valCol?.key])), backgroundColor: 'rgba(59, 130, 246, 0.75)', yAxisID: 'y' },
-              { type: 'line', label: qtyCol ? qtyCol.title : '數量', data: sheet.data.map(r => parseNum(r[qtyCol?.key])), borderColor: '#ef4444', backgroundColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, tension: 0.2 }
-            ]
-          },
-          plugins: [yearSeparatorPlugin],
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-              x: { grid: { display: false } },
-              y: { type: 'linear', position: 'left', title: { display: true, text: '市值 (NT$)' } },
-              y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '數量 (PCS)' } }
-            }
-          }
-        });
-      }
+      // 繪製 C3: 石墨刀 金額與佔比
+      drawBarLineChart('c3', labels, getValues(graphiteFeeRow), getRatioValues(graphiteRatioRow), '石墨刀具費', '佔比 (%)', 'y', 'y1');
+      // 繪製 C4: 石墨刀 費與成本
+      drawDoubleLineChart('c4', labels, getValues(graphiteFeeRow), getValues(graphiteCostRow), '石墨刀具費', '石墨產品成本');
 
-      const c2Canvas = document.getElementById('canvas-c2');
-      if (c2Canvas) {
-        if (window.chartInstances['c2']) window.chartInstances['c2'].destroy();
-        const ratioCol = sheet.columns.find(c => c.title.includes('比例') || c.title.includes('比')) || sheet.columns[sheet.columns.length - 1];
-        const ratioData = sheet.data.map(r => {
-          let v = String(r[ratioCol?.key] || '0').replace('%','');
-          let n = parseFloat(v);
-          return isNaN(n) ? 0 : (n <= 1 ? n * 100 : n);
-        });
+      // 繪製 C5: 其他刀 金額與佔比
+      drawBarLineChart('c5', labels, getValues(otherFeeRow), getRatioValues(otherRatioRow), '其他刀具費', '佔比 (%)', 'y', 'y1');
+      // 繪製 C6: 其他刀 費與成本
+      drawDoubleLineChart('c6', labels, getValues(otherFeeRow), getValues(otherCostRow), '其他刀具費', '其他產品成本');
+    }
 
-        window.chartInstances['c2'] = new Chart(c2Canvas, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{ label: ratioCol ? ratioCol.title : '比例', data: ratioData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, borderWidth: 2, tension: 0.2, pointRadius: 4 }]
-          },
-          plugins: [yearSeparatorPlugin],
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-              x: { grid: { display: false } },
-              y: { ticks: { callback: v => v + '%' } }
-            }
+    function drawBarLineChart(chartId, labels, barData, lineData, barLabel, lineLabel, yId, y1Id) {
+      const canvas = document.getElementById(`canvas-${chartId}`);
+      if (!canvas) return;
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+      window.chartInstances[chartId] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { type: 'bar', label: barLabel, data: barData, backgroundColor: '#94a3b8', yAxisID: yId },
+            { type: 'line', label: lineLabel, data: lineData, borderColor: '#ef4444', backgroundColor: '#ef4444', yAxisID: y1Id, borderWidth: 2, tension: 0.2, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: '金額 (NT$)' } },
+            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%' }, title: { display: true, text: '佔比 (%)' } }
           }
-        });
-      }
+        }
+      });
+    }
+
+    function drawDoubleLineChart(chartId, labels, line1Data, line2Data, line1Label, line2Label) {
+      const canvas = document.getElementById(`canvas-${chartId}`);
+      if (!canvas) return;
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+      window.chartInstances[chartId] = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { type: 'line', label: line1Label, data: line1Data, borderColor: '#2563eb', backgroundColor: '#2563eb', yAxisID: 'y', borderWidth: 2, tension: 0.2, pointRadius: 3 },
+            { type: 'line', label: line2Label, data: line2Data, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', yAxisID: 'y1', borderWidth: 2, tension: 0.2, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: '刀具費 (NT$)' } },
+            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '產品成本 (NT$)' } }
+          }
+        }
+      });
     }
 
     window.exportChartToPNG = function(chartId, title) {
