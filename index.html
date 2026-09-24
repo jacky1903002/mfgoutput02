@@ -35,7 +35,6 @@
     const ADMIN_EMAIL = "n1693131@gmail.com";
     window.isAuthorizedEditor = false;
 
-    // 預設資料結構（符合您的 3 大類別與 20 個月份）
     const defaultSheets = [
       {
         id: "s1",
@@ -258,9 +257,11 @@
       tableHtml += `</tbody></table>`;
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
-      // 檢查是否為「刀具費佔成本」工作表，若是則繪製專屬 6 張圖表
+      // 自動判斷是否為刀具成本分析資料表（只要包含 5 欄以上或是名稱含刀具/成本）
+      let isCostSheet = currentSheet.columns.length > 5 || currentSheet.name.includes("刀具") || currentSheet.name.includes("成本") || currentSheet.name.includes("工作表1");
+
       let chartsHtml = '';
-      if (currentSheet.name.includes("刀具費佔成本") || currentSheet.columns.length > 5) {
+      if (isCostSheet) {
         chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
         const chartConfigs = [
           { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
@@ -295,7 +296,7 @@
       document.getElementById('charts-container').innerHTML = chartsHtml;
 
       setTimeout(() => { 
-        if (currentSheet.name.includes("刀具費佔成本") || currentSheet.columns.length > 5) {
+        if (isCostSheet) {
           buildAllSixCharts(currentSheet); 
         } else {
           buildDefaultChart(currentSheet);
@@ -408,12 +409,12 @@
       XLSX.writeFile(wb, "MFG_Output_Analysis.xlsx");
     };
 
-    window.importFromExcel = function(event) {
+    window.importFromExcel = async function(event) {
       if (!window.isAuthorizedEditor) { alert("需要管理者權限才能匯入！"); return; }
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         let newSheets = [];
@@ -435,7 +436,14 @@
           window.appState.sheets = newSheets;
           window.appState.currentSheetId = newSheets[0].id;
           renderApp();
-          alert("Excel 匯入成功！");
+          
+          // 自動儲存至 Firebase 避免重新整理遺失
+          try {
+            await set(ref(db, 'mfg_data'), window.appState);
+            alert("Excel 匯入成功，並已自動同步儲存至 Firebase！");
+          } catch (err) {
+            alert("Excel 匯入成功，但自動同步至 Firebase 失敗：" + err.message);
+          }
         }
       };
       reader.readAsArrayBuffer(file);
@@ -462,17 +470,14 @@
         });
       };
 
-      // 鎢鉬鈕相關列
       const tungstenFeeRow = getRowByKeywords("鎢鉬鈕", "刀具費");
       const tungstenCostRow = getRowByKeywords("鎢鉬鈕", "成本");
       const tungstenRatioRow = getRowByKeywords("鎢鉬鈕", "佔比");
 
-      // 石墨刀相關列
       const graphiteFeeRow = getRowByKeywords("石墨刀", "刀具費");
       const graphiteCostRow = getRowByKeywords("石墨刀", "成本");
       const graphiteRatioRow = getRowByKeywords("石墨刀", "佔比");
 
-      // 其他刀相關列
       const otherFeeRow = getRowByKeywords("其他刀", "刀具費");
       const otherCostRow = getRowByKeywords("其他刀", "成本");
       const otherRatioRow = getRowByKeywords("其他刀", "佔比");
