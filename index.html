@@ -9,23 +9,27 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs & 整合您的專屬設定 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
     import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCmW2AKlYHWu-4iGcemM706jRbOdOmhQCA",
+      apiKey: "AIzaSyCmW2AKlYHWu-4iGceM7m06jRbOdOmhQCA",
       authDomain: "mfgoutput02.firebaseapp.com",
       databaseURL: "https://mfgoutput02-default-rtdb.firebaseio.com",
       projectId: "mfgoutput02",
-      storageBucket: "mfgoutput02.appspot.com",
+      storageBucket: "mfgoutput02.firebasestorage.app",
       messagingSenderId: "1026604402542",
-      appId: "1:1026604402542:web:4c70c756ec7c823f90e37f"
+      appId: "1:1026604402542:web:4c70c756ec7c823f90e37f",
+      measurementId: "G-90ZEMDZVFP"
     };
 
+    // 初始化 Firebase 與 Analytics
     const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
     const db = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
@@ -120,7 +124,6 @@
       renderApp();
     });
 
-    window.loadDataFromFirebase = loadDataFromFirebase;
     loadDataFromFirebase();
   </script>
 
@@ -188,7 +191,6 @@
   </div>
 
   <script>
-    // 渲染整體介面
     window.renderApp = function() {
       const state = window.appState;
       if (!state || !state.sheets) return;
@@ -196,7 +198,6 @@
       const currentSheet = state.sheets.find(s => s.id === state.currentSheetId) || state.sheets[0];
       state.currentSheetId = currentSheet.id;
 
-      // 1. 渲染分頁導覽列
       let tabsHtml = '';
       state.sheets.forEach(sheet => {
         const isActive = sheet.id === currentSheet.id ? 'active' : '';
@@ -210,7 +211,6 @@
       tabsHtml += `<button class="btn btn-primary" style="padding: 4px 10px;" onclick="addSheet()"><i class="fa-solid fa-plus"></i> 新增工作表</button>`;
       document.getElementById('sheet-tabs-container').innerHTML = tabsHtml;
 
-      // 2. 渲染動態表格
       let tableHtml = `<table><thead><tr>`;
       currentSheet.columns.forEach((col, colIdx) => {
         tableHtml += `<th>${window.isAuthorizedEditor ? `<input type="text" value="${col.title}" class="cell-input" style="font-weight:bold;" onchange="updateColTitle(${colIdx}, this.value)">` : col.title}</th>`;
@@ -228,9 +228,7 @@
       tableHtml += `</tbody></table>`;
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
-      // 3. 渲染對應圖表 (具備一頁一張獨立匯出 PNG 功能)[cite: 5]
       let chartsHtml = `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表</div><div class="charts-grid">`;
-      
       chartsHtml += `
         <div class="chart-page" id="export-area-c1">
           <div class="chart-header">
@@ -254,7 +252,6 @@
       setTimeout(() => { buildCharts(currentSheet); }, 100);
     };
 
-    // 切換分頁
     window.switchSheet = function(id) {
       window.appState.currentSheetId = id;
       renderApp();
@@ -285,7 +282,6 @@
       }
     };
 
-    // 表格行列異動
     window.addRow = function() {
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
@@ -336,7 +332,6 @@
       sheet.columns[colIdx].title = val;
     };
 
-    // Excel 匯出與匯入功能
     window.exportToExcel = function() {
       const wb = XLSX.utils.book_new();
       window.appState.sheets.forEach(sheet => {
@@ -384,7 +379,6 @@
       reader.readAsArrayBuffer(file);
     };
 
-    // 圖表繪製與年份垂直分隔線插件
     const yearSeparatorPlugin = {
       id: 'yearSeparatorPlugin',
       afterDraw(chart) {
@@ -428,7 +422,6 @@
     function buildCharts(sheet) {
       const labels = sheet.data.map(r => r[sheet.columns[0].key] || '');
       
-      // 圖表一：雙軸組合圖 (市值與數量)
       const c1Canvas = document.getElementById('canvas-c1');
       if (c1Canvas) {
         if (window.chartInstances['c1']) window.chartInstances['c1'].destroy();
@@ -456,7 +449,6 @@
         });
       }
 
-      // 圖表二：比例折線圖
       const c2Canvas = document.getElementById('canvas-c2');
       if (c2Canvas) {
         if (window.chartInstances['c2']) window.chartInstances['c2'].destroy();
@@ -485,7 +477,6 @@
       }
     }
 
-    // 單張圖表匯出 PNG
     window.exportChartToPNG = function(chartId, title) {
       const element = document.getElementById(`export-area-${chartId}`);
       if (!element) return;
