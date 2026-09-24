@@ -1,550 +1,1228 @@
 <!DOCTYPE html>
+
 <html lang="zh-TW">
+
 <head>
+
   <meta charset="UTF-8">
+
   <title>MFG Output Analysis</title>
+
   <!-- 引入 FontAwesome, Chart.js, html2canvas, SheetJS (xlsx) -->
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   
+
   <!-- Firebase SDKs & 登入機制 -->
+
   <script type="module">
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+
     import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
+
+
     const firebaseConfig = {
+
       apiKey: "AIzaSyCmW2AKlYHWu-4iGceM7m06jRbOdOmhQCA",
+
       authDomain: "mfgoutput02.firebaseapp.com",
+
       databaseURL: "https://mfgoutput02-default-rtdb.firebaseio.com",
+
       projectId: "mfgoutput02",
+
       storageBucket: "mfgoutput02.firebasestorage.app",
+
       messagingSenderId: "1026604402542",
+
       appId: "1:1026604402542:web:4c70c756ec7c823f90e37f",
+
       measurementId: "G-90ZEMDZVFP"
+
     };
+
+
 
     const app = initializeApp(firebaseConfig);
+
     const analytics = getAnalytics(app);
+
     const db = getDatabase(app);
+
     const auth = getAuth(app);
 
+
+
     const ADMIN_EMAIL = "n1693131@gmail.com";
+
     window.isAuthorizedEditor = false;
 
+
+
     let saveTimeout = null;
+
     window.autoSaveToFirebase = function() {
+
       if (!window.isAuthorizedEditor) return;
+
       const statusEl = document.getElementById('save-status');
+
       if (statusEl) statusEl.innerText = "儲存中...";
+
       
+
       if (saveTimeout) clearTimeout(saveTimeout);
+
       saveTimeout = setTimeout(async () => {
+
         try {
+
           await set(ref(db, 'mfg_data'), window.appState);
+
           if (statusEl) {
+
             statusEl.innerText = "已自動儲存";
+
             setTimeout(() => { if (statusEl.innerText === "已自動儲存") statusEl.innerText = ""; }, 2000);
+
           }
+
         } catch (e) {
+
           if (statusEl) statusEl.innerText = "儲存失敗";
+
         }
+
       }, 800);
+
     };
 
+
+
     const defaultSheets = [
+
       {
+
         id: "s1",
+
         name: "工作表1",
+
         columns: [
+
           { key: "category", title: "類別" },
+
           { key: "m1", title: "Jan-25" }, { key: "m2", title: "Feb-25" }, { key: "m3", title: "Mar-25" },
+
           { key: "m4", title: "Apr-25" }, { key: "m5", title: "May-25" }, { key: "m6", title: "Jun-25" },
+
           { key: "m7", title: "Jul-25" }, { key: "m8", title: "Aug-25" }, { key: "m9", title: "Sep-25" },
+
           { key: "m10", title: "Oct-25" }, { key: "m11", title: "Nov-25" }, { key: "m12", title: "Dec-25" },
+
           { key: "m13", title: "Jan-26" }, { key: "m14", title: "Feb-26" }, { key: "m15", title: "Mar-26" },
+
           { key: "m16", title: "Apr-26" }, { key: "m17", title: "May-26" }, { key: "m18", title: "Jun-26" },
+
           { key: "m19", title: "Jul-26" }, { key: "m20", title: "Aug-26" }
+
         ],
+
         data: [
+
           { category: "鎢鉬鈕 刀具費", m1: 900000, m2: 960000, m3: 960000, m4: 1010000, m5: 1090000, m6: 1390000, m7: 1330000, m8: 1250000, m9: 1400000, m10: 1280000, m11: 1350000, m12: 1450000, m13: 1410000, m14: 890000, m15: 1330000, m16: 1520000, m17: 1560000, m18: 1660000, m19: 1340000, m20: 1760000 },
+
           { category: "鎢鉬鈕 產品成本", m1: 250000, m2: 210000, m3: 280000, m4: 310000, m5: 290000, m6: 280000, m7: 400000, m8: 320000, m9: 350000, m10: 370000, m11: 360000, m12: 330000, m13: 390000, m14: 270000, m15: 440000, m16: 350000, m17: 370000, m18: 340000, m19: 550000, m20: 470000 },
+
           { category: "鎢鉬鈕 佔比(%)", m1: 3.5, m2: 4.5, m3: 3.2, m4: 3.0, m5: 3.6, m6: 4.8, m7: 3.2, m8: 3.0, m9: 3.8, m10: 4.0, m11: 3.8, m12: 4.2, m13: 3.2, m14: 3.0, m15: 3.5, m16: 4.2, m17: 4.5, m18: 4.8, m19: 2.5, m20: 3.5 },
+
           { category: "石墨刀 刀具費", m1: 330000, m2: 370000, m3: 390000, m4: 410000, m5: 280000, m6: 300000, m7: 350000, m8: 340000, m9: 350000, m10: 340000, m11: 350000, m12: 440000, m13: 410000, m14: 270000, m15: 440000, m16: 490000, m17: 480000, m18: 510000, m19: 400000, m20: 400000 },
+
           { category: "石墨刀 產品成本", m1: 67000, m2: 61000, m3: 78000, m4: 94000, m5: 48000, m6: 58000, m7: 71000, m8: 96000, m9: 96000, m10: 77000, m11: 75000, m12: 90000, m13: 95000, m14: 95000, m15: 10500, m16: 77000, m17: 14000, m18: 17000, m19: 18500, m20: 10500 },
+
           { category: "石墨刀 佔比(%)", m1: 4.8, m2: 6.0, m3: 4.9, m4: 4.3, m5: 5.7, m6: 5.1, m7: 4.8, m8: 4.5, m9: 3.5, m10: 4.2, m11: 4.4, m12: 4.7, m13: 3.2, m14: 2.0, m15: 3.0, m16: 6.2, m17: 3.1, m18: 2.5, m19: 1.8, m20: 3.2 },
+
           { category: "其他刀 刀具費", m1: 200000, m2: 230000, m3: 260000, m4: 190000, m5: 190000, m6: 210000, m7: 170000, m8: 130000, m9: 250000, m10: 160000, m11: 200000, m12: 230000, m13: 420000, m14: 300000, m15: 410000, m16: 520000, m17: 500000, m18: 660000, m19: 710000, m20: 760000 },
+
           { category: "其他刀 產品成本", m1: 38000, m2: 28000, m3: 35000, m4: 26000, m5: 36000, m6: 28000, m7: 36000, m8: 41000, m9: 33000, m10: 27000, m11: 41000, m12: 26000, m13: 42000, m14: 28000, m15: 40000, m16: 37000, m17: 37000, m18: 37000, m19: 50000, m20: 45000 },
+
           { category: "其他刀 佔比(%)", m1: 0.5, m2: 0.8, m3: 0.7, m4: 0.7, m5: 0.5, m6: 0.7, m7: 0.4, m8: 0.3, m9: 0.7, m10: 0.5, m11: 0.4, m12: 0.8, m13: 0.9, m14: 1.0, m15: 1.0, m16: 1.3, m17: 1.2, m18: 1.6, m19: 1.4, m20: 1.5 }
+
         ]
+
       },
+
       {
+
         id: "s2",
+
         name: "累計產值與同期比較",
+
         columns: [
+
           { key: "month", title: "月份" },
+
           { key: "y2023", title: "2023" },
+
           { key: "y2024", title: "2024" },
+
           { key: "y2025", title: "2025" },
+
           { key: "y2026", title: "2026" },
+
           { key: "material", title: "材質" }
+
         ],
+
         data: [
+
           { month: "Jan", y2023: 13372096, y2024: 22561729, y2025: 12509595, y2026: 16907778, material: "石墨" },
+
           { month: "Feb", y2023: 19277893, y2024: 13934248, y2025: 10208637, y2026: 21164246, material: "石墨" },
+
           { month: "Mar", y2023: 24022470, y2024: 21177269, y2025: 14376146, y2026: 18292116, material: "石墨" },
+
           { month: "Apr", y2023: 15690183, y2024: 12515636, y2025: 18312755, y2026: 18774951, material: "石墨" },
+
           { month: "May", y2023: 18773167, y2024: 12685520, y2025: 11008159, y2026: 27481364, material: "石墨" },
+
           { month: "Jun", y2023: 18287010, y2024: 22020757, y2025: 11841812, y2026: 26651472, material: "石墨" },
+
           { month: "Jul", y2023: 21342006, y2024: 15121182, y2025: 13516843, y2026: 29802201, material: "石墨" },
+
           { month: "Aug", y2023: 18228237, y2024: 13217908, y2025: 15404698, y2026: 23408496, material: "石墨" },
+
           { month: "Sep", y2023: 16972588, y2024: 14651680, y2025: 17314104, y2026: 0, material: "石墨" },
+
           { month: "Oct", y2023: 18000000, y2024: 15000000, y2025: 16000000, y2026: 0, material: "石墨" },
+
           { month: "Nov", y2023: 17500000, y2024: 14000000, y2025: 15500000, y2026: 0, material: "石墨" },
+
           { month: "Dec", y2023: 19000000, y2024: 16000000, y2025: 17000000, y2026: 0, material: "石墨" },
 
+
+
           { month: "Jan", y2023: 12000000, y2024: 15000000, y2025: 11000000, y2026: 14000000, material: "鎢鉬鈕" },
+
           { month: "Feb", y2023: 13000000, y2024: 12000000, y2025: 9500000, y2026: 15000000, material: "鎢鉬鈕" },
+
           { month: "Mar", y2023: 15000000, y2024: 14000000, y2025: 12000000, y2026: 16000000, material: "鎢鉬鈕" },
+
           { month: "Apr", y2023: 14000000, y2024: 11000000, y2025: 13000000, y2026: 15500000, material: "鎢鉬鈕" },
+
           { month: "May", y2023: 16000000, y2024: 13000000, y2025: 10000000, y2026: 18000000, material: "鎢鉬鈕" },
+
           { month: "Jun", y2023: 15500000, y2024: 14500000, y2025: 11500000, y2026: 17500000, material: "鎢鉬鈕" },
+
           { month: "Jul", y2023: 17000000, y2024: 13500000, y2025: 12500000, y2026: 19000000, material: "鎢鉬鈕" },
+
           { month: "Aug", y2023: 16500000, y2024: 12500000, y2025: 14000000, y2026: 18500000, material: "鎢鉬鈕" },
+
           { month: "Sep", y2023: 15000000, y2024: 13000000, y2025: 13500000, y2026: 0, material: "鎢鉬鈕" },
+
           { month: "Oct", y2023: 16000000, y2024: 14000000, y2025: 14500000, y2026: 0, material: "鎢鉬鈕" },
+
           { month: "Nov", y2023: 15500000, y2024: 13500000, y2025: 14000000, y2026: 0, material: "鎢鉬鈕" },
+
           { month: "Dec", y2023: 17000000, y2024: 15000000, y2025: 16000000, y2026: 0, material: "鎢鉬鈕" },
 
+
+
           { month: "Jan", y2023: 8000000, y2024: 9000000, y2025: 7500000, y2026: 9500000, material: "其他" },
+
           { month: "Feb", y2023: 8500000, y2024: 8000000, y2025: 7000000, y2026: 10000000, material: "其他" },
+
           { month: "Mar", y2023: 9000000, y2024: 9500000, y2025: 8500000, y2026: 11000000, material: "其他" },
+
           { month: "Apr", y2023: 8800000, y2024: 8500000, y2025: 9000000, y2026: 10500000, material: "其他" },
+
           { month: "May", y2023: 9500000, y2024: 9000000, y2025: 8000000, y2026: 12000000, material: "其他" },
+
           { month: "Jun", y2023: 9200000, y2024: 9800000, y2025: 8200000, y2026: 11800000, material: "其他" },
+
           { month: "Jul", y2023: 10000000, y2024: 9200000, y2025: 8800000, y2026: 12500000, material: "其他" },
+
           { month: "Aug", y2023: 9800000, y2024: 8800000, y2025: 9500000, y2026: 12200000, material: "其他" },
+
           { month: "Sep", y2023: 9000000, y2024: 8900000, y2025: 9100000, y2026: 0, material: "其他" },
+
           { month: "Oct", y2023: 9500000, y2024: 9200000, y2025: 9600000, y2026: 0, material: "其他" },
+
           { month: "Nov", y2023: 9300000, y2024: 9000000, y2025: 9400000, y2026: 0, material: "其他" },
+
           { month: "Dec", y2023: 10000000, y2024: 9800000, y2025: 10200000, y2026: 0, material: "其他" }
+
         ]
+
       }
+
     ];
+
+
 
     window.appState = { sheets: [], currentSheetId: "s1" };
 
+
+
     async function loadDataFromFirebase() {
+
       try {
+
         const snapshot = await get(ref(db, 'mfg_data'));
+
         if (snapshot.exists()) {
+
           window.appState = snapshot.val();
+
         } else {
+
           window.appState = { sheets: defaultSheets, currentSheetId: "s1" };
+
           await set(ref(db, 'mfg_data'), window.appState);
+
         }
+
       } catch (e) {
+
         window.appState = { sheets: defaultSheets, currentSheetId: "s1" };
+
       }
+
       renderApp();
+
     }
 
+
+
     window.toggleLoginModal = function(show) {
+
       document.getElementById('login-modal').style.display = show ? 'flex' : 'none';
+
     };
+
+
 
     window.handleEmailLogin = function() {
+
       const email = document.getElementById('login-email').value;
+
       const pass = document.getElementById('login-password').value;
+
       signInWithEmailAndPassword(auth, email, pass)
+
         .then(() => { alert("登入成功！"); window.toggleLoginModal(false); })
+
         .catch(error => alert("登入失敗: " + error.message));
+
     };
+
+
 
     window.logoutGoogle = function() {
+
       signOut(auth).catch(error => alert("登出失敗: " + error.message));
+
     };
 
+
+
     onAuthStateChanged(auth, (user) => {
+
       const userSpan = document.getElementById("user-info");
+
       const authBtn = document.getElementById("auth-btn");
+
       if (user) {
+
         userSpan.innerText = `管理者：${user.email}`;
+
         if (user.email === ADMIN_EMAIL) {
+
           window.isAuthorizedEditor = true;
+
           authBtn.innerText = "登出";
+
           authBtn.onclick = window.logoutGoogle;
+
           authBtn.style.background = "#dc2626";
+
         } else {
+
           window.isAuthorizedEditor = false;
+
           authBtn.innerText = "權限不足 (登出)";
+
           authBtn.onclick = window.logoutGoogle;
+
         }
+
       } else {
+
         window.isAuthorizedEditor = false;
+
         userSpan.innerText = "未登入";
+
         authBtn.innerText = "管理員登入";
+
         authBtn.onclick = () => window.toggleLoginModal(true);
+
         authBtn.style.background = "#2563eb";
+
       }
+
       renderApp();
+
     });
 
+
+
     loadDataFromFirebase();
+
   </script>
 
+
+
   <style>
+
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+
     header { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
     .brand { font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 8px; color: #0f172a; }
+
     .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+
     .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; color: white; }
+
     .btn-primary { background: #2563eb; } .btn-primary:hover { background: #1d4ed8; }
+
     .btn-success { background: #10b981; } .btn-success:hover { background: #059669; }
+
     .btn-danger { background: #ef4444; } .btn-danger:hover { background: #dc2626; }
+
     .btn-secondary { background: #64748b; } .btn-secondary:hover { background: #475569; }
+
     
+
     .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+
     .sheet-tabs-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; overflow-x: auto; }
+
     .sheet-tab { padding: 8px 16px; background: #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; color: #475569; user-select: none; }
+
     .sheet-tab.active { background: #2563eb; color: white; }
+
     
+
     .toolbar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+
     .table-container { background: white; border-radius: 8px; border: 1px solid #cbd5e1; max-height: 400px; overflow: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px; }
+
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
+
     th, td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; }
+
     th { background: #f8fafc; font-weight: 600; color: #475569; position: sticky; top: 0; z-index: 10; }
+
     input.cell-input { width: 100%; border: none; background: transparent; font-size: 13px; color: inherit; outline: none; }
+
     input.cell-input:focus { background: #eff6ff; border-radius: 4px; }
 
+
+
     .charts-section-title { font-size: 18px; font-weight: bold; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 8px; color: #0284c7; }
+
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+
     @media(max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+
     .chart-page { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+
     .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+
     .chart-title { font-size: 15px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px; }
+
     .chart-wrapper { position: relative; height: 320px; width: 100%; }
 
+
+
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+
     .modal-box { background: white; padding: 30px; border-radius: 10px; width: 350px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
     .modal-box h3 { margin-top: 0; margin-bottom: 20px; color: #1e293b; }
+
     .modal-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
   </style>
+
 </head>
+
 <body>
 
+
+
   <header>
+
     <div class="brand"><i class="fa-solid fa-chart-line" style="color:#2563eb;"></i> MFG Output Analysis</div>
+
     <div class="header-right">
+
       <span id="save-status" style="font-size: 13px; color: #10b981; font-weight: 500;"></span>
+
       <span id="user-info" style="color: #64748b;">檢查登入中...</span>
+
       <button class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> 匯出 Excel</button>
+
       <label class="btn btn-primary" style="margin:0; cursor:pointer;">
+
         <i class="fa-solid fa-file-import"></i> 匯入 Excel <input type="file" id="excel-file-input" style="display:none" accept=".xlsx, .xls" onchange="importFromExcel(event)">
+
       </label>
+
       <button id="auth-btn" class="btn btn-primary">管理員登入</button>
+
     </div>
+
   </header>
 
+
+
   <div class="modal-overlay" id="login-modal">
+
     <div class="modal-box">
+
       <h3>管理員登入</h3>
+
       <input type="email" id="login-email" placeholder="請輸入管理者電子郵件" value="n1693131@gmail.com">
+
       <input type="password" id="login-password" placeholder="請輸入密碼">
+
       <div class="modal-actions">
+
         <button class="btn btn-secondary" onclick="toggleLoginModal(false)">取消</button>
+
         <button class="btn btn-primary" onclick="handleEmailLogin()">登入</button>
+
       </div>
+
     </div>
+
   </div>
+
+
 
   <div class="container">
+
     <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">工作表導覽列：(提示：以管理者身分登入後，**雙擊工作表分頁**可進行重新命名)</div>
+
     <div class="sheet-tabs-bar" id="sheet-tabs-container"></div>
+
     
+
     <div class="toolbar">
+
       <button class="btn btn-primary" onclick="addRow()"><i class="fa-solid fa-plus"></i> 新增列 (Row)</button>
+
       <button class="btn btn-danger" onclick="deleteLastRow()"><i class="fa-solid fa-trash"></i> 刪除最後一列</button>
+
       <button class="btn btn-primary" onclick="addColumn()"><i class="fa-solid fa-plus"></i> 新增欄位 (Column)</button>
+
       <button class="btn btn-danger" onclick="deleteLastColumn()"><i class="fa-solid fa-trash"></i> 刪除最後一欄</button>
+
     </div>
 
+
+
     <div class="table-container" id="table-view-container"></div>
+
     
+
     <div id="charts-container"></div>
+
   </div>
 
+
+
   <script>
+
     window.renderApp = function() {
+
       const state = window.appState;
+
       if (!state || !state.sheets) return;
+
       
+
       const currentSheet = state.sheets.find(s => s.id === state.currentSheetId) || state.sheets[0];
+
       state.currentSheetId = currentSheet.id;
 
+
+
       let tabsHtml = '';
+
       state.sheets.forEach(sheet => {
+
         const isActive = sheet.id === currentSheet.id ? 'active' : '';
+
         tabsHtml += `
+
           <div class="sheet-tab ${isActive}" onclick="switchSheet('${sheet.id}')" ondblclick="renameSheet('${sheet.id}')" title="雙擊可重新命名">
+
             <i class="fa-solid fa-table"></i> ${sheet.name}
+
             ${window.isAuthorizedEditor && state.sheets.length > 1 ? `<i class="fa-solid fa-xmark" onclick="event.stopPropagation(); deleteSheet('${sheet.id}')"></i>` : ''}
+
           </div>
+
         `;
+
       });
+
       tabsHtml += `<button class="btn btn-primary" style="padding: 4px 10px;" onclick="addSheet()"><i class="fa-solid fa-plus"></i> 新增工作表</button>`;
+
       document.getElementById('sheet-tabs-container').innerHTML = tabsHtml;
 
+
+
       let tableHtml = `<table><thead><tr>`;
+
       currentSheet.columns.forEach((col, colIdx) => {
+
         tableHtml += `<th>${window.isAuthorizedEditor ? `<input type="text" value="${col.title}" class="cell-input" style="font-weight:bold;" onchange="updateColTitle(${colIdx}, this.value)">` : col.title}</th>`;
+
       });
+
       tableHtml += `</tr></thead><tbody>`;
 
+
+
       currentSheet.data.forEach((row, rowIdx) => {
+
         tableHtml += `<tr>`;
+
         currentSheet.columns.forEach(col => {
+
           let val = row[col.key] !== undefined ? row[col.key] : '';
+
           tableHtml += `<td>${window.isAuthorizedEditor ? `<input type="text" value="${val}" class="cell-input" onchange="updateCell(${rowIdx}, '${col.key}', this.value)">` : val}</td>`;
+
         });
+
         tableHtml += `</tr>`;
+
       });
+
       tableHtml += `</tbody></table>`;
+
       document.getElementById('table-view-container').innerHTML = tableHtml;
 
+
+
       let chartsHtml = '';
+
       if (currentSheet.id === "s2" || currentSheet.name.includes("累計")) {
+
         chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> 產值同期與累積產值分析圖表 (共8張)</div><div class="charts-grid">`;
+
         const chartConfigs = [
+
           { id: 'sc1', title: '產值同期比較 (石墨)' },
+
           { id: 'sc2', title: '產值同期比較 (鎢鉬鈕)' },
+
           { id: 'sc3', title: '產值同期比較 (其他)' },
+
           { id: 'sc4', title: '產值同期比較 (合計)' },
+
           { id: 'sc5', title: '石墨累積產值' },
+
           { id: 'sc6', title: '鎢鉬鈕累積產值' },
+
           { id: 'sc7', title: '其他累積產值' },
+
           { id: 'sc8', title: '合計累積產值' }
+
         ];
 
+
+
         chartConfigs.forEach(cfg => {
+
           chartsHtml += `
+
             <div class="chart-page" id="export-area-${cfg.id}">
+
               <div class="chart-header">
+
                 <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+
                 <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+
               </div>
+
               <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
+
             </div>
+
           `;
+
         });
+
         chartsHtml += `</div>`;
+
       } else {
+
         let isCostSheet = currentSheet.columns.length > 5 || currentSheet.name.includes("刀具") || currentSheet.name.includes("成本") || currentSheet.name.includes("工作表");
+
         if (isCostSheet) {
+
           chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 相關分析圖表 (共6張)</div><div class="charts-grid">`;
+
           const chartConfigs = [
+
             { id: 'c1', title: '2025/01-2026/08 鎢鉬鈕刀具費金額與佔比趨勢圖' },
+
             { id: 'c2', title: '2025/01~2026/08 鎢鉬鈕刀具費與成本趨勢圖' },
+
             { id: 'c3', title: '2025/01-2026/08 石墨刀具費金額與佔比趨勢圖' },
+
             { id: 'c4', title: '2025/01~2026/08 石墨刀具費與成本趨勢圖' },
+
             { id: 'c5', title: '2025/01-2026/08 其他刀具費金額與佔比趨勢圖' },
+
             { id: 'c6', title: '2025/01~2026/08 其他刀具費與成本趨勢圖' }
+
           ];
 
+
+
           chartConfigs.forEach(cfg => {
+
             chartsHtml += `
+
               <div class="chart-page" id="export-area-${cfg.id}">
+
                 <div class="chart-header">
+
                   <div class="chart-title"><i class="fa-solid fa-chart-area" style="color:#2563eb;"></i> ${cfg.title}</div>
+
                   <button class="btn btn-success" onclick="exportChartToPNG('${cfg.id}', '${cfg.title}')"><i class="fa-solid fa-download"></i> 匯出</button>
+
                 </div>
+
                 <div class="chart-wrapper"><canvas id="canvas-${cfg.id}"></canvas></div>
+
               </div>
+
             `;
+
           });
+
           chartsHtml += `</div>`;
+
         } else {
+
           chartsHtml += `<div class="charts-section-title"><i class="fa-solid fa-chart-line"></i> ${currentSheet.name} 分析圖表</div><div class="charts-grid">
+
             <div class="chart-page" id="export-area-default">
+
               <div class="chart-header"><div class="chart-title"><i class="fa-solid fa-chart-bar"></i> 數據概覽圖</div></div>
+
               <div class="chart-wrapper"><canvas id="canvas-default"></canvas></div>
+
             </div>
+
           </div>`;
+
         }
+
       }
+
+
 
       document.getElementById('charts-container').innerHTML = chartsHtml;
 
+
+
       setTimeout(() => { 
+
         if (currentSheet.id === "s2" || currentSheet.name.includes("累計")) {
+
           buildAllEightComparisonCharts(currentSheet);
+
         } else {
+
           let isCostSheet = currentSheet.columns.length > 5 || currentSheet.name.includes("刀具") || currentSheet.name.includes("成本") || currentSheet.name.includes("工作表");
+
           if (isCostSheet) {
+
             buildAllSixCharts(currentSheet); 
+
           } else {
+
             buildDefaultChart(currentSheet);
+
           }
+
         }
+
       }, 100);
+
     };
+
+
 
     window.switchSheet = function(id) {
+
       window.appState.currentSheetId = id;
+
       renderApp();
+
     };
+
+
 
     window.addSheet = function() {
+
       if (!window.isAuthorizedEditor) { alert("需要管理者權限才能操作！"); return; }
+
       const name = prompt("請輸入新工作表名稱：");
+
       if (!name) return;
+
       const newId = 's_' + Date.now();
+
       window.appState.sheets.push({
+
         id: newId,
+
         name: name,
+
         columns: [{ key: "category", title: "類別" }, { key: "m1", title: "Jan-26" }, { key: "m2", title: "Feb-26" }],
+
         data: [{ category: "範例項目", m1: 100, m2: 200 }]
+
       });
+
       window.appState.currentSheetId = newId;
+
       renderApp();
+
       window.autoSaveToFirebase();
+
     };
+
+
 
     window.renameSheet = function(id) {
+
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
+
       const sheet = window.appState.sheets.find(s => s.id === id);
+
       if (!sheet) return;
+
       const newName = prompt("請輸入新的工作表名稱：", sheet.name);
+
       if (newName && newName.trim() !== "") {
+
         sheet.name = newName.trim();
+
         renderApp();
+
         window.autoSaveToFirebase();
+
       }
+
     };
+
+
 
     window.deleteSheet = function(id) {
+
       if (!window.isAuthorizedEditor) return;
+
       if (window.appState.sheets.length <= 1) { alert("至少需保留一個工作表！"); return; }
+
       if (confirm("確定要刪除此工作表嗎？")) {
+
         window.appState.sheets = window.appState.sheets.filter(s => s.id !== id);
+
         window.appState.currentSheetId = window.appState.sheets[0].id;
+
         renderApp();
+
         window.autoSaveToFirebase();
+
       }
+
     };
+
+
 
     window.addRow = function() {
+
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       let newRow = {};
+
       sheet.columns.forEach((c, idx) => newRow[c.key] = idx === 0 ? '新項目' : 0);
+
       sheet.data.push(newRow);
+
       renderApp();
+
       window.autoSaveToFirebase();
+
     };
+
+
 
     window.deleteLastRow = function() {
+
       if (!window.isAuthorizedEditor) return;
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       if (sheet.data.length > 0) { 
+
         sheet.data.pop(); 
+
         renderApp(); 
+
         window.autoSaveToFirebase();
+
       }
+
     };
+
+
 
     window.addColumn = function() {
+
       if (!window.isAuthorizedEditor) { alert("需要管理者權限！"); return; }
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       const colTitle = prompt("請輸入新欄位標題 (例: Sep-26)：");
+
       if (!colTitle) return;
+
       const colKey = 'col_' + Date.now();
+
       sheet.columns.push({ key: colKey, title: colTitle });
+
       sheet.data.forEach(r => r[colKey] = 0);
+
       renderApp();
+
       window.autoSaveToFirebase();
+
     };
+
+
 
     window.deleteLastColumn = function() {
+
       if (!window.isAuthorizedEditor) return;
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       if (sheet.columns.length > 1) {
+
         const removed = sheet.columns.pop();
+
         sheet.data.forEach(r => delete r[removed.key]);
+
         renderApp();
+
         window.autoSaveToFirebase();
+
       } else {
+
         alert("至少需保留一個欄位！");
+
       }
+
     };
+
+
 
     window.updateCell = function(rowIdx, key, val) {
+
       if (!window.isAuthorizedEditor) return;
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       sheet.data[rowIdx][key] = val;
+
       window.autoSaveToFirebase();
+
     };
+
+
 
     window.updateColTitle = function(colIdx, val) {
+
       if (!window.isAuthorizedEditor) return;
+
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
+
       sheet.columns[colIdx].title = val;
+
       window.autoSaveToFirebase();
+
     };
+
+
 
     window.exportToExcel = function() {
+
       const wb = XLSX.utils.book_new();
+
       window.appState.sheets.forEach(sheet => {
+
         const exportData = sheet.data.map(row => {
+
           let obj = {};
+
           sheet.columns.forEach(col => { obj[col.title] = row[col.key]; });
+
           return obj;
+
         });
+
         const ws = XLSX.utils.json_to_sheet(exportData);
+
         XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+
       });
+
       XLSX.writeFile(wb, "MFG_Output_Analysis.xlsx");
+
     };
+
+
 
     window.importFromExcel = async function(event) {
+
       if (!window.isAuthorizedEditor) { alert("需要管理者權限才能匯入！"); return; }
+
       const file = event.target.files[0];
+
       if (!file) return;
+
       const reader = new FileReader();
+
       reader.onload = async function(e) {
+
         const data = new Uint8Array(e.target.result);
+
         const workbook = XLSX.read(data, { type: 'array' });
+
         
+
         const sheetName = workbook.SheetNames[0];
+
         const worksheet = workbook.Sheets[sheetName];
+
         const json = XLSX.utils.sheet_to_json(worksheet);
+
         
+
         if (json.length > 0) {
+
           const keys = Object.keys(json[0]);
+
           const columns = keys.map((k, i) => ({ key: i === 0 ? 'category' : `m${i}`, title: k }));
+
           const sheetData = json.map(row => {
+
             let rObj = {};
+
             keys.forEach((k, i) => { rObj[columns[i].key] = row[k]; });
+
             return rObj;
+
           });
 
+
+
           const currentSheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId) || window.appState.sheets[0];
+
           currentSheet.columns = columns;
+
           currentSheet.data = sheetData;
+
           
+
           renderApp();
+
           window.autoSaveToFirebase();
+
           alert("Excel 匯入成功，並已自動同步儲存至 Firebase！");
+
         }
+
       };
+
       reader.readAsArrayBuffer(file);
+
     };
 
+
+
     function parseNum(val) {
+
+      if (val === undefined || val === null || val === '') return 0;
+
+      let s = String(val).replace(/[^0-9.-]/g, '');
+
+      let n = parseFloat(s);
+
+      return isNaN(n) ? 0 : n;
+
+    }
+
+
+
+    window.chartInstances = {};
+
+
+
+    function buildAllEightComparisonCharts(sheet) {
+
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      const materials = ["石墨", "鎢鉬鈕", "其他"];
+
+
+
+      const getMaterialRows = (mat) => {
+
+        return sheet.data.filter(r => String(r.material || '').trim() === mat);
+
+      };
+
+
+
+      const getCombinedRows = () => {
+
+        let combined = [];
+
+        months.forEach((m, idx) => {
+
+          let rowObj = { month: m, y2023: 0, y2024: 0, y2025: 0, y2026: 0 };
+
+          materials.forEach(mat => {
+
+            let mRows = getMaterialRows(mat);
+
+            let target = mRows[idx];
+
+            if (target) {
+
+              rowObj.y2023 += parseNum(target.y2023);
+
+              rowObj.y2024 += parseNum(target.y2024);
+
+              rowObj.y2025 += parseNum(target.y2025);
+
+              rowObj.y2026 += parseNum(target.y2026);
+
+            }
+
+          });
+
+          combined.push(rowObj);
+
+        });
+
+        return combined;
+
+      };
+
+
+
+      // 1-4: 產值同期比較 (柱狀圖)
+
+      materials.forEach((mat, idx) => {
+
+        let rows = getMaterialRows(mat);
+
+        drawBarComparisonChart(`sc${idx+1}`, rows, `${mat}產值同期比較`);
+
+      });
+
+      // 合計同期比較
+
+      drawBarComparisonChart('sc4', getCombinedRows(), '合計產值同期比較');
+
+
+
+      // 5-8: 累積產值 (折線圖)
+
+      materials.forEach((mat, idx) => {
+
+        let rows = getMaterialRows(mat);
+
+        drawCumulativeLineChart(`sc${idx+5}`, rows, `${mat}累積產值`);
+
+      });
+
+      // 合計累積產值
+
+      drawCumulativeLineChart('sc8', getCombinedRows(), '合計累積產值');
+
+    }
+
+
+
+    function drawBarComparisonChart(chartId, rows, titleText) {
+
+      const canvas = document.getElementById(`canvas-${chartId}`);
+
+      if (!canvas) return;
+
+      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
+
+
+
+      const labels = rows.map(r => r.month);
+
+      window.chartInstances[chartId] = new Chart(canvas, {
+
+        type: 'bar',
+
+        data: {
+
+          labels: labels,
+
+          datasets: [
+
+            { label: '2023', data: rows.map(r => parseNum(r.y2023)), backgroundColor: '#10b981' },
+
+            { label: '2024', data: rows.map(r => parseNum(r.y2024)), backgroundColor: '#3b82f6' },
+
+            { label: '2025', data: rows.map(r => parseNum(r.y2025)), backgroundColor: '#f59e0b' },function parseNum(val) {
       if (val === undefined || val === null || val === '') return 0;
       let s = String(val).replace(/[^0-9.-]/g, '');
       let n = parseFloat(s);
@@ -585,15 +1263,13 @@
         let rows = getMaterialRows(mat);
         drawBarComparisonChart(`sc${idx+1}`, rows, `${mat}產值同期比較`);
       });
-      // 合計同期比較
       drawBarComparisonChart('sc4', getCombinedRows(), '合計產值同期比較');
 
-      // 5-8: 累積產值 (折線圖)
+      // 5-8: 累積產值 (折線圖 - 需進行累加運算)
       materials.forEach((mat, idx) => {
         let rows = getMaterialRows(mat);
         drawCumulativeLineChart(`sc${idx+5}`, rows, `${mat}累積產值`);
       });
-      // 合計累積產值
       drawCumulativeLineChart('sc8', getCombinedRows(), '合計累積產值');
     }
 
@@ -615,10 +1291,11 @@
           ]
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { grid: { display: false } },
-            y: { title: { display: true, text: 'NT$' } }
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false, text: titleText }
           }
         }
       });
@@ -630,173 +1307,32 @@
       if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
 
       const labels = rows.map(r => r.month);
-      
-      // 計算累加數值
+
+      // 計算各年份的累積產值 (Cumulative Sum)
       let sum23 = 0, sum24 = 0, sum25 = 0, sum26 = 0;
-      let data23 = rows.map(r => sum23 += parseNum(r.y2023));
-      let data24 = rows.map(r => sum24 += parseNum(r.y2024));
-      let data25 = rows.map(r => sum25 += parseNum(r.y2025));
-      let data26 = rows.map(r => sum26 += parseNum(r.y2026));
+      const data23 = rows.map(r => { sum23 += parseNum(r.y2023); return sum23; });
+      const data24 = rows.map(r => { sum24 += parseNum(r.y2024); return sum24; });
+      const data25 = rows.map(r => { sum25 += parseNum(r.y2025); return sum25; });
+      const data26 = rows.map(r => { sum26 += parseNum(r.y2026); return sum26; });
 
       window.chartInstances[chartId] = new Chart(canvas, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [
-            { label: '2023', data: data23, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.2, pointRadius: 3 },
-            { label: '2024', data: data24, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.2, pointRadius: 3 },
-            { label: '2025', data: data25, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.2, pointRadius: 3 },
-            { label: '2026', data: data26, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.2, pointRadius: 3 }
+            { label: '2023 累積', data: data23, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.1 },
+            { label: '2024 累積', data: data24, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.1 },
+            { label: '2025 累積', data: data25, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.1 },
+            { label: '2026 累積', data: data26, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.1 }
           ]
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { grid: { display: false } },
-            y: { title: { display: true, text: 'NT$' } }
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false, text: titleText }
           }
         }
       });
     }
-
-    function buildAllSixCharts(sheet) {
-      const monthCols = sheet.columns.filter(c => {
-        let t = String(c.title || '').trim();
-        return t.includes('-') || t.includes('25') || t.includes('26');
-      });
-      const finalMonthCols = monthCols.length > 0 ? monthCols : sheet.columns.slice(1);
-      const labels = finalMonthCols.map(c => c.title);
-      const catKey = sheet.columns[0].key;
-
-      const findRow = (kw1, kw2) => {
-        return sheet.data.find(r => {
-          let val = String(r[catKey] || '').trim();
-          if (kw2) { return val.includes(kw1) && val.includes(kw2); }
-          return val.includes(kw1);
-        });
-      };
-
-      const getValues = (row) => row ? finalMonthCols.map(c => parseNum(row[c.key])) : labels.map(() => 0);
-      const getRatioValues = (row) => row ? finalMonthCols.map(c => {
-        let v = String(row[c.key] || '0').replace('%','');
-        let n = parseFloat(v);
-        return isNaN(n) ? 0 : (n <= 1 ? n * 100 : n);
-      }) : labels.map(() => 0);
-
-      const tungFee = findRow("鎢", "刀具") || findRow("鎢鉬", "費") || sheet.data[0];
-      const tungCost = findRow("鎢", "成本") || findRow("鎢鉬", "成本") || sheet.data[1];
-      const tungRatio = findRow("鎢", "佔比") || findRow("鎢鉬", "佔比") || sheet.data[2];
-
-      const graphFee = findRow("石墨", "刀具") || findRow("石墨", "費") || sheet.data[3];
-      const graphCost = findRow("石墨", "成本") || sheet.data[4];
-      const graphRatio = findRow("石墨", "佔比") || sheet.data[5];
-
-      const otherFee = findRow("其他", "刀具") || findRow("其他", "費") || sheet.data[6];
-      const otherCost = findRow("其他", "成本") || sheet.data[7];
-      const otherRatio = findRow("其他", "佔比") || sheet.data[8];
-
-      drawBarLineChartWithCustomScale('c1', labels, getValues(tungFee), getRatioValues(tungRatio), '鎢鉬鈕刀具費', '佔比 (%)', 2000000, 5, 'y', 'y1');
-      drawDoubleLineChart('c2', labels, getValues(tungFee), getValues(tungCost), '鎢鉬鈕刀具費', '鎢鉬產品成本');
-      
-      drawBarLineChartWithCustomScale('c3', labels, getValues(graphFee), getRatioValues(graphRatio), '石墨刀具費', '佔比 (%)', 700000, 7, 'y', 'y1');
-      drawDoubleLineChart('c4', labels, getValues(graphFee), getValues(graphCost), '石墨刀具費', '石墨產品成本');
-
-      drawBarLineChartWithCustomScale('c5', labels, getValues(otherFee), getRatioValues(otherRatio), '其他刀具費', '佔比 (%)', 900000, 2, 'y', 'y1');
-      drawDoubleLineChart('c6', labels, getValues(otherFee), getValues(otherCost), '其他刀具費', '其他產品成本');
-    }
-
-    function buildDefaultChart(sheet) {
-      const canvas = document.getElementById('canvas-default');
-      if (!canvas) return;
-      if (window.chartInstances['default']) window.chartInstances['default'].destroy();
-      const labels = sheet.data.map(r => r[sheet.columns[0].key] || '');
-      const valCol = sheet.columns[1];
-      window.chartInstances['default'] = new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{ label: valCol ? valCol.title : '數值', data: sheet.data.map(r => parseNum(r[valCol?.key])), backgroundColor: 'rgba(59, 130, 246, 0.7)' }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-    }
-
-    function drawBarLineChartWithCustomScale(chartId, labels, barData, lineData, barLabel, lineLabel, maxVal, maxRatio, yId, y1Id) {
-      const canvas = document.getElementById(`canvas-${chartId}`);
-      if (!canvas) return;
-      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
-
-      window.chartInstances[chartId] = new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            { type: 'bar', label: barLabel, data: barData, backgroundColor: '#94a3b8', yAxisID: yId, order: 2 },
-            { type: 'line', label: lineLabel, data: lineData, borderColor: '#ef4444', backgroundColor: '#ef4444', yAxisID: y1Id, borderWidth: 2.5, tension: 0.2, pointRadius: 4, order: 1 }
-          ]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { grid: { display: false } },
-            y: { 
-              type: 'linear', 
-              position: 'left', 
-              max: maxVal,
-              ticks: { stepSize: maxVal / 8 },
-              title: { display: true, text: '金額 (NT$)' } 
-            },
-            y1: { 
-              type: 'linear', 
-              position: 'right', 
-              max: maxRatio,
-              ticks: { 
-                stepSize: maxRatio / 7,
-                callback: function(v) { return Math.round(v) + '%'; } 
-              }, 
-              grid: { drawOnChartArea: false }, 
-              title: { display: true, text: '佔比 (%)' } 
-            }
-          }
-        }
-      });
-    }
-
-    function drawDoubleLineChart(chartId, labels, line1Data, line2Data, line1Label, line2Label) {
-      const canvas = document.getElementById(`canvas-${chartId}`);
-      if (!canvas) return;
-      if (window.chartInstances[chartId]) window.chartInstances[chartId].destroy();
-
-      window.chartInstances[chartId] = new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { type: 'line', label: line1Label, data: line1Data, borderColor: '#2563eb', backgroundColor: '#2563eb', yAxisID: 'y', borderWidth: 2, tension: 0.2, pointRadius: 3 },
-            { type: 'line', label: line2Label, data: line2Data, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', yAxisID: 'y1', borderWidth: 2, tension: 0.2, pointRadius: 3 }
-          ]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { grid: { display: false } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: '刀具費 (NT$)' } },
-            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '產品成本 (NT$)' } }
-          }
-        }
-      });
-    }
-
-    window.exportChartToPNG = function(chartId, title) {
-      const element = document.getElementById(`export-area-${chartId}`);
-      if (!element) return;
-      html2canvas(element, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `${title}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      }).catch(() => alert("匯出圖片失敗！"));
-    };
-  </script>
-</body>
-</html>
