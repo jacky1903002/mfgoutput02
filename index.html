@@ -35,6 +35,26 @@
     const ADMIN_EMAIL = "n1693131@gmail.com";
     window.isAuthorizedEditor = false;
 
+    let saveTimeout = null;
+    window.autoSaveToFirebase = function() {
+      if (!window.isAuthorizedEditor) return;
+      const statusEl = document.getElementById('save-status');
+      if (statusEl) statusEl.innerText = "儲存中...";
+      
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(async () => {
+        try {
+          await set(ref(db, 'mfg_data'), window.appState);
+          if (statusEl) {
+            statusEl.innerText = "已自動儲存";
+            setTimeout(() => { if (statusEl.innerText === "已自動儲存") statusEl.innerText = ""; }, 2000);
+          }
+        } catch (e) {
+          if (statusEl) statusEl.innerText = "儲存失敗";
+        }
+      }, 800);
+    };
+
     const defaultSheets = [
       {
         id: "s1",
@@ -79,19 +99,6 @@
       }
       renderApp();
     }
-
-    window.saveDataToFirebase = async function() {
-      if (!window.isAuthorizedEditor) {
-        alert("您沒有編輯權限！請先以管理員帳號登入。");
-        return;
-      }
-      try {
-        await set(ref(db, 'mfg_data'), window.appState);
-        alert("成功同步儲存至 Firebase！");
-      } catch (e) {
-        alert("儲存失敗：" + e.message);
-      }
-    };
 
     window.toggleLoginModal = function(show) {
       document.getElementById('login-modal').style.display = show ? 'flex' : 'none';
@@ -181,13 +188,13 @@
   <header>
     <div class="brand"><i class="fa-solid fa-chart-line" style="color:#2563eb;"></i> MFG Output Analysis</div>
     <div class="header-right">
+      <span id="save-status" style="font-size: 13px; color: #10b981; font-weight: 500;"></span>
       <span id="user-info" style="color: #64748b;">檢查登入中...</span>
       <button class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> 匯出 Excel</button>
       <label class="btn btn-primary" style="margin:0; cursor:pointer;">
         <i class="fa-solid fa-file-import"></i> 匯入 Excel <input type="file" id="excel-file-input" style="display:none" accept=".xlsx, .xls" onchange="importFromExcel(event)">
       </label>
       <button id="auth-btn" class="btn btn-primary">管理員登入</button>
-      <button class="btn btn-success" onclick="saveDataToFirebase()"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存至 Firebase</button>
     </div>
   </header>
 
@@ -321,6 +328,7 @@
       });
       window.appState.currentSheetId = newId;
       renderApp();
+      window.autoSaveToFirebase();
     };
 
     window.renameSheet = function(id) {
@@ -331,6 +339,7 @@
       if (newName && newName.trim() !== "") {
         sheet.name = newName.trim();
         renderApp();
+        window.autoSaveToFirebase();
       }
     };
 
@@ -341,6 +350,7 @@
         window.appState.sheets = window.appState.sheets.filter(s => s.id !== id);
         window.appState.currentSheetId = window.appState.sheets[0].id;
         renderApp();
+        window.autoSaveToFirebase();
       }
     };
 
@@ -351,12 +361,17 @@
       sheet.columns.forEach((c, idx) => newRow[c.key] = idx === 0 ? '新項目' : 0);
       sheet.data.push(newRow);
       renderApp();
+      window.autoSaveToFirebase();
     };
 
     window.deleteLastRow = function() {
       if (!window.isAuthorizedEditor) return;
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
-      if (sheet.data.length > 0) { sheet.data.pop(); renderApp(); }
+      if (sheet.data.length > 0) { 
+        sheet.data.pop(); 
+        renderApp(); 
+        window.autoSaveToFirebase();
+      }
     };
 
     window.addColumn = function() {
@@ -368,6 +383,7 @@
       sheet.columns.push({ key: colKey, title: colTitle });
       sheet.data.forEach(r => r[colKey] = 0);
       renderApp();
+      window.autoSaveToFirebase();
     };
 
     window.deleteLastColumn = function() {
@@ -377,6 +393,7 @@
         const removed = sheet.columns.pop();
         sheet.data.forEach(r => delete r[removed.key]);
         renderApp();
+        window.autoSaveToFirebase();
       } else {
         alert("至少需保留一個欄位！");
       }
@@ -386,12 +403,14 @@
       if (!window.isAuthorizedEditor) return;
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
       sheet.data[rowIdx][key] = val;
+      window.autoSaveToFirebase();
     };
 
     window.updateColTitle = function(colIdx, val) {
       if (!window.isAuthorizedEditor) return;
       const sheet = window.appState.sheets.find(s => s.id === window.appState.currentSheetId);
       sheet.columns[colIdx].title = val;
+      window.autoSaveToFirebase();
     };
 
     window.exportToExcel = function() {
@@ -435,13 +454,8 @@
           currentSheet.data = sheetData;
           
           renderApp();
-          
-          try {
-            await set(ref(db, 'mfg_data'), window.appState);
-            alert("Excel 匯入成功（已保留原工作表名稱），並已自動同步儲存至 Firebase！");
-          } catch (err) {
-            alert("Excel 匯入成功，但自動同步至 Firebase 失敗：" + err.message);
-          }
+          window.autoSaveToFirebase();
+          alert("Excel 匯入成功，並已自動同步儲存至 Firebase！");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -494,7 +508,6 @@
       const otherCost = findRow("其他", "成本") || sheet.data[7];
       const otherRatio = findRow("其他", "佔比") || sheet.data[8];
 
-      // 最佳化刻度範圍 (針對不同種類自動動態計算 max 與 stepSize)
       drawBarLineChartWithCustomScale('c1', labels, getValues(tungFee), getRatioValues(tungRatio), '鎢鉬鈕刀具費', '佔比 (%)', 2000000, 5, 'y', 'y1');
       drawDoubleLineChart('c2', labels, getValues(tungFee), getValues(tungCost), '鎢鉬鈕刀具費', '鎢鉬產品成本');
       
@@ -531,7 +544,6 @@
         data: {
           labels: labels,
           datasets: [
-            // 注意：將 line 放在 datasets 陣列後面，確保折線會繪製在柱狀圖的「前面」
             { type: 'bar', label: barLabel, data: barData, backgroundColor: '#94a3b8', yAxisID: yId, order: 2 },
             { type: 'line', label: lineLabel, data: lineData, borderColor: '#ef4444', backgroundColor: '#ef4444', yAxisID: y1Id, borderWidth: 2.5, tension: 0.2, pointRadius: 4, order: 1 }
           ]
@@ -553,7 +565,7 @@
               max: maxRatio,
               ticks: { 
                 stepSize: maxRatio / 7,
-                callback: v => v + '%' 
+                callback: function(v) { return Math.round(v) + '%'; } 
               }, 
               grid: { drawOnChartArea: false }, 
               title: { display: true, text: '佔比 (%)' } 
