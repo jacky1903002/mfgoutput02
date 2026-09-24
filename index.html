@@ -9,12 +9,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- Firebase SDKs & 整合您的專屬設定 -->
+  <!-- Firebase SDKs & 登入機制修正為 Email / Password -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
     import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCmW2AKlYHWu-4iGceM7m06jRbOdOmhQCA",
@@ -27,12 +27,10 @@
       measurementId: "G-90ZEMDZVFP"
     };
 
-    // 初始化 Firebase 與 Analytics
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
     const ADMIN_EMAIL = "n1693131@gmail.com";
     window.isAuthorizedEditor = false;
@@ -91,8 +89,27 @@
       }
     };
 
-    window.loginGoogle = function() {
-      signInWithPopup(auth, provider).catch(error => alert("登入失敗: " + error.message));
+    // 展開/關閉登入彈窗
+    window.toggleLoginModal = function(show) {
+      document.getElementById('login-modal').style.display = show ? 'flex' : 'none';
+    };
+
+    // 執行信箱密碼登入
+    window.handleEmailLogin = function() {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      if (!email || !pass) {
+        alert("請輸入電子郵件與密碼！");
+        return;
+      }
+      signInWithEmailAndPassword(auth, email, pass)
+        .then(() => {
+          alert("登入成功！");
+          window.toggleLoginModal(false);
+        })
+        .catch(error => {
+          alert("登入失敗: " + error.message);
+        });
     };
 
     window.logoutGoogle = function() {
@@ -102,6 +119,8 @@
     onAuthStateChanged(auth, (user) => {
       const userSpan = document.getElementById("user-info");
       const authBtn = document.getElementById("auth-btn");
+      const modalBtn = document.getElementById("modal-login-btn");
+      
       if (user) {
         userSpan.innerText = `管理者：${user.email}`;
         if (user.email === ADMIN_EMAIL) {
@@ -118,7 +137,7 @@
         window.isAuthorizedEditor = false;
         userSpan.innerText = "未登入";
         authBtn.innerText = "管理員登入";
-        authBtn.onclick = window.loginGoogle;
+        authBtn.onclick = () => window.toggleLoginModal(true);
         authBtn.style.background = "#2563eb";
       }
       renderApp();
@@ -157,6 +176,13 @@
     .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .chart-title { font-size: 16px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px; }
     .chart-wrapper { position: relative; height: 380px; width: 100%; }
+
+    /* 登入彈窗樣式 */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { background: white; padding: 30px; border-radius: 10px; width: 350px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .modal-box h3 { margin-top: 0; margin-bottom: 20px; color: #1e293b; }
+    .modal-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
   </style>
 </head>
 <body>
@@ -173,6 +199,19 @@
       <button class="btn btn-success" onclick="saveDataToFirebase()"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存至 Firebase</button>
     </div>
   </header>
+
+  <!-- 登入對話框 -->
+  <div class="modal-overlay" id="login-modal">
+    <div class="modal-box">
+      <h3>管理員登入</h3>
+      <input type="email" id="login-email" placeholder="請輸入管理者電子郵件" value="n1693131@gmail.com">
+      <input type="password" id="login-password" placeholder="請輸入密碼">
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="toggleLoginModal(false)">取消</button>
+        <button class="btn btn-primary" onclick="handleEmailLogin()">登入</button>
+      </div>
+    </div>
+  </div>
 
   <div class="container">
     <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">工作表導覽列：</div>
